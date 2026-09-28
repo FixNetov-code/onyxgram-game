@@ -1267,6 +1267,33 @@ function renderBets(bets) {
   });
 }
 
+// --- Быстрое пополнение (Демо / Тест) ---
+document.querySelectorAll(".quick-demo-topup-btn").forEach(btn => {
+  btn.onclick = async () => {
+    const stars = parseInt(btn.dataset.stars, 10);
+    try {
+      const res = await fetch("/api/topup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: userId, amount: stars })
+      }).then(r => r.json());
+
+      if (res.ok) {
+        userBalance = res.balance;
+        elUserBalance.textContent = userBalance;
+        showToast(`✅ Баланс успешно пополнен: +${stars} ⭐`);
+        triggerHaptic("success");
+        playSound("cashout");
+        elTopupModal.style.display = "none";
+      } else {
+        showToast(res.error || "Ошибка пополнения");
+      }
+    } catch (e) {
+      showToast("Ошибка: " + e.message);
+    }
+  };
+});
+
 // --- Пополнение реальными Stars через Инвойс ---
 document.querySelectorAll(".real-topup-btn").forEach(btn => {
   btn.onclick = async () => {
@@ -1289,15 +1316,20 @@ document.querySelectorAll(".real-topup-btn").forEach(btn => {
         // Нативное окно оплаты Stars прямо в WebApp
         window.Telegram.WebApp.openInvoice(res.invoice_link, async (status) => {
           if (status === "paid") {
+            try {
+              const u = await fetch("/api/topup", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: userId, amount: stars })
+              }).then(r => r.json());
+              if (u.ok) {
+                userBalance = u.balance;
+                elUserBalance.textContent = userBalance;
+              }
+            } catch (err) {}
             showToast(`✅ Оплата прошла успешно! +${stars} ⭐`);
             triggerHaptic("success");
             playSound("cashout");
-            // Обновляем баланс
-            setTimeout(async () => {
-              const u = await fetch(`/api/user?id=${userId}`).then(r => r.json());
-              userBalance = u.balance;
-              elUserBalance.textContent = userBalance;
-            }, 800);
             elTopupModal.style.display = "none";
           } else if (status === "cancelled") {
             showToast("Оплата отменена");
