@@ -1,0 +1,351 @@
+"""
+Модуль базы данных SQLite для OnyxGram Crash с поддержкой админ-аналитики.
+"""
+import aiosqlite
+import os
+
+DB_PATH = os.path.join(os.path.dirname(__file__), "crash.db")
+
+INIT_SQL = """
+CREATE TABLE IF NOT EXISTS users (
+    user_id INTEGER PRIMARY KEY,
+    username TEXT,
+    balance INTEGER DEFAULT 100,
+    total_bet INTEGER DEFAULT 0,
+    total_won INTEGER DEFAULT 0,
+    is_banned INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS rounds (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    crash_point REAL NOT NULL,
+    total_bets_sum INTEGER DEFAULT 0,
+    total_payout_sum INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS bets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    round_id INTEGER,
+    user_id INTEGER,
+    amount INTEGER NOT NULL,
+    cashout_mult REAL DEFAULT NULL,
+    profit INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS slot_spins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    bet INTEGER NOT NULL,
+    payout INTEGER NOT NULL,
+    multiplier REAL NOT NULL,
+    symbols TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS mines_games (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    bet INTEGER NOT NULL,
+    mines_count INTEGER NOT NULL,
+    steps_cleared INTEGER DEFAULT 0,
+    multiplier REAL DEFAULT 1.0,
+    payout INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS upgrade_games (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    bet INTEGER NOT NULL,
+    target_multiplier REAL NOT NULL,
+    payout INTEGER NOT NULL,
+    chance REAL NOT NULL,
+    roll REAL NOT NULL,
+    status TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS tower_games (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    bet INTEGER NOT NULL,
+    difficulty TEXT NOT NULL,
+    floors_cleared INTEGER NOT NULL,
+    multiplier REAL NOT NULL,
+    payout INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(user_id)
+);
+"""
+
+async def init_db():
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.executescript(INIT_SQL)
+        # Проверяем наличие колонки is_banned (миграция для существующих баз)
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0")
+        except Exception:
+            pass
+        await db.commit()
+
+async def get_or_create_user(user_id: int, username: str = "Player") -> dict:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)) as cur:
+            row = await cur.fetchone()
+            if row:
+                return dict(row)
+        
+        await db.execute(
+            "INSERT INTO users (user_id, username, balance) VALUES (?, ?, 0)",
+            (user_id, username)
+        )
+        await db.commit()
+        return {"user_id": user_id, "username": username, "balance": 0, "total_bet": 0, "total_won": 0, "is_banned": 0}
+
+async def update_balance(user_id: int, delta: int) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        await db.execute(
+            "UPDATE users SET balance = balance + ? WHERE user_id = ?",
+            (delta, user_id)
+        )
+        await db.commit()
+        async with db.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)) as cur:
+            row = await cur.fetchone()
+            return row["balance"] if row else 0
+
+async def record_round(crash_point: float, total_bets: int, total_payout: int) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "INSERT INTO rounds (crash_point, total_bets_sum, total_payout_sum) VALUES (?, ?, ?)",
+            (crash_point, total_bets, total_payout)
+        )
+        await db.commit()
+        return cursor.lastrowid
+
+async def get_recent_rounds(limit: int = 15) -> list[float]:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            "SELECT crash_point FROM rounds ORDER BY id DESC LIMIT ?", (limit,)
+        ) as cur:
+            rows = await cur.fetchall()
+            return [round(r[0], 2) for r in rows][::-1]
+
+async def record_slot_spin(user_id: int, bet: int, payout: int, multiplier: float, symbols: list[str]) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "INSERT INTO slot_spins (user_id, bet, payout, multiplier, symbols) VALUES (?, ?, ?, ?, ?)",
+            (user_id, bet, payout, multiplier, ",".join(symbols))
+        )
+        await db.commit()
+        return cur.lastrowid
+
+async def record_mines_game(user_id: int, bet: int, mines_count: int, steps_cleared: int, multiplier: float, payout: int, status: str) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "INSERT INTO mines_games (user_id, bet, mines_count, steps_cleared, multiplier, payout, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (user_id, bet, mines_count, steps_cleared, multiplier, payout, status)
+        )
+        await db.commit()
+        return cur.lastrowid
+
+async def record_upgrade_game(user_id: int, bet: int, target_multiplier: float, payout: int, chance: float, roll: float, status: str) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "INSERT INTO upgrade_games (user_id, bet, target_multiplier, payout, chance, roll, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (user_id, bet, target_multiplier, payout, chance, roll, status)
+        )
+        await db.commit()
+        return cur.lastrowid
+
+async def record_tower_game(user_id: int, bet: int, difficulty: str, floors_cleared: int, multiplier: float, payout: int, status: str) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "INSERT INTO tower_games (user_id, bet, difficulty, floors_cleared, multiplier, payout, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (user_id, bet, difficulty, floors_cleared, multiplier, payout, status)
+        )
+        await db.commit()
+        return cur.lastrowid
+
+async def get_leaderboard(period: str = "day", exclude_owner_ids=(2127001, 289802, 968937)) -> list[dict]:
+    """Возвращает топ заносов игроков за день или за неделю (исключая создателя)."""
+    time_filter = "datetime('now', '-1 day')" if period == "day" else "datetime('now', '-7 days')"
+    
+    if isinstance(exclude_owner_ids, int):
+        ex_set = {exclude_owner_ids}
+    else:
+        ex_set = set(exclude_owner_ids)
+    in_clause = ",".join(str(x) for x in ex_set) if ex_set else "0"
+
+    query = f"""
+    SELECT * FROM (
+        SELECT b.user_id, COALESCE(u.username, 'Player') as username, b.profit as payout, b.cashout_mult as multiplier, '🚀 Crash' as game, b.created_at
+        FROM bets b
+        LEFT JOIN users u ON b.user_id = u.user_id
+        WHERE b.status = 'won' AND b.profit > 0 AND b.created_at >= {time_filter} AND b.user_id NOT IN ({in_clause})
+
+        UNION ALL
+
+        SELECT s.user_id, COALESCE(u.username, 'Player') as username, s.payout, s.multiplier, '🎰 Слоты' as game, s.created_at
+        FROM slot_spins s
+        LEFT JOIN users u ON s.user_id = u.user_id
+        WHERE s.payout > 0 AND s.created_at >= {time_filter} AND s.user_id NOT IN ({in_clause})
+
+        UNION ALL
+
+        SELECT m.user_id, COALESCE(u.username, 'Player') as username, m.payout, m.multiplier, '💣 Минёр' as game, m.created_at
+        FROM mines_games m
+        LEFT JOIN users u ON m.user_id = u.user_id
+        WHERE m.payout > 0 AND (m.status = 'cashed_out' OR m.status = 'win') AND m.created_at >= {time_filter} AND m.user_id NOT IN ({in_clause})
+
+        UNION ALL
+
+        SELECT up.user_id, COALESCE(u.username, 'Player') as username, up.payout, up.target_multiplier as multiplier, '⚡ Апгрейд' as game, up.created_at
+        FROM upgrade_games up
+        LEFT JOIN users u ON up.user_id = u.user_id
+        WHERE up.status = 'win' AND up.payout > 0 AND up.created_at >= {time_filter} AND up.user_id NOT IN ({in_clause})
+
+        UNION ALL
+
+        SELECT tw.user_id, COALESCE(u.username, 'Player') as username, tw.payout, tw.multiplier, '🏰 Башня' as game, tw.created_at
+        FROM tower_games tw
+        LEFT JOIN users u ON tw.user_id = u.user_id
+        WHERE (tw.status = 'won' OR tw.status = 'cashed_out') AND tw.payout > 0 AND tw.created_at >= {time_filter} AND tw.user_id NOT IN ({in_clause})
+    )
+    WHERE user_id NOT IN ({in_clause})
+    ORDER BY payout DESC, multiplier DESC
+    LIMIT 15
+    """
+
+    results = []
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(query) as cur:
+                rows = await cur.fetchall()
+                results = [
+                    dict(r) for r in rows
+                    if r["user_id"] not in ex_set
+                    and (r["username"] or "").lower() not in ("владелец", "создатель", "owner", "admin")
+                ]
+    except Exception:
+        pass
+
+    # Если мало записей, дополняем яркими демо-заносами для подогрева азарта
+    if len(results) < 5:
+        demo_wins = [
+            {"username": "💎 ton_whale", "game": "🎰 Слоты", "multiplier": 100.0, "payout": 5000, "user_id": 9001},
+            {"username": "🚀 crypto_kid", "game": "🚀 Crash", "multiplier": 28.40, "payout": 2840, "user_id": 9002},
+            {"username": "👑 star_king", "game": "💣 Минёр", "multiplier": 14.85, "payout": 1485, "user_id": 9003},
+            {"username": "⚡ onyx_pro", "game": "⚡ Апгрейд", "multiplier": 10.00, "payout": 1000, "user_id": 9004},
+            {"username": "🎯 sniper_99", "game": "🚀 Crash", "multiplier": 8.50, "payout": 850, "user_id": 9005},
+            {"username": "🦊 lucky_fox", "game": "💣 Минёр", "multiplier": 6.20, "payout": 620, "user_id": 9006},
+            {"username": "🔥 fire_hand", "game": "🎰 Слоты", "multiplier": 50.0, "payout": 500, "user_id": 9007},
+        ]
+        for d in demo_wins:
+            if len(results) >= 10:
+                break
+            if not any(r.get("username") == d["username"] for r in results):
+                results.append(d)
+
+    return results
+
+# --- Админские функции ---
+
+async def get_casino_stats() -> dict:
+    """Возвращает агрегированную статистику казино по всем играм."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        
+        # Пользователи
+        async with db.execute("SELECT COUNT(*) as cnt, SUM(balance) as total_bal FROM users") as cur:
+            u_row = await cur.fetchone()
+            users_count = u_row["cnt"] or 0
+            users_balance = u_row["total_bal"] or 0
+            
+        # Crash раунды и ставки
+        async with db.execute("SELECT COUNT(*) as rounds_cnt, SUM(total_bets_sum) as total_in, SUM(total_payout_sum) as total_out FROM rounds") as cur:
+            r_row = await cur.fetchone()
+            rounds_count = r_row["rounds_cnt"] or 0
+            crash_in = r_row["total_in"] or 0
+            crash_out = r_row["total_out"] or 0
+            
+        # Слоты 777
+        async with db.execute("SELECT COUNT(*) as spins_cnt, SUM(bet) as total_bet, SUM(payout) as total_payout FROM slot_spins") as cur:
+            s_row = await cur.fetchone()
+            spins_count = s_row["spins_cnt"] or 0
+            slots_in = s_row["total_bet"] or 0
+            slots_out = s_row["total_payout"] or 0
+
+        # Минёр
+        async with db.execute("SELECT COUNT(*) as mines_cnt, SUM(bet) as total_bet, SUM(payout) as total_payout FROM mines_games") as cur:
+            m_row = await cur.fetchone()
+            mines_count = m_row["mines_cnt"] or 0
+            mines_in = m_row["total_bet"] or 0
+            mines_out = m_row["total_payout"] or 0
+
+        # Апгрейд
+        async with db.execute("SELECT COUNT(*) as up_cnt, SUM(bet) as total_bet, SUM(payout) as total_payout FROM upgrade_games") as cur:
+            up_row = await cur.fetchone()
+            upgrade_count = up_row["up_cnt"] or 0 if up_row else 0
+            upgrade_in = up_row["total_bet"] or 0 if up_row else 0
+            upgrade_out = up_row["total_payout"] or 0 if up_row else 0
+
+        # Башня (Tower)
+        async with db.execute("SELECT COUNT(*) as tw_cnt, SUM(bet) as total_bet, SUM(payout) as total_payout FROM tower_games") as cur:
+            tw_row = await cur.fetchone()
+            tower_count = tw_row["tw_cnt"] or 0 if tw_row else 0
+            tower_in = tw_row["total_bet"] or 0 if tw_row else 0
+            tower_out = tw_row["total_payout"] or 0 if tw_row else 0
+
+        total_bets = crash_in + slots_in + mines_in + upgrade_in + tower_in
+        total_payout = crash_out + slots_out + mines_out + upgrade_out + tower_out
+        profit = total_bets - total_payout
+            
+        return {
+            "users_count": users_count,
+            "users_balance": users_balance,
+            "rounds_count": rounds_count,
+            "spins_count": spins_count,
+            "mines_games_count": mines_count,
+            "upgrade_games_count": upgrade_count,
+            "tower_games_count": tower_count,
+            "crash_bets": crash_in,
+            "slots_bets": slots_in,
+            "mines_bets": mines_in,
+            "upgrade_bets": upgrade_in,
+            "tower_bets": tower_in,
+            "total_bets": total_bets,
+            "total_payout": total_payout,
+            "net_profit": profit
+        }
+
+async def admin_set_balance(user_id: int, new_balance: int) -> bool:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE users SET balance = ? WHERE user_id = ?", (new_balance, user_id))
+        await db.commit()
+        return True
+
+async def admin_ban_user(user_id: int, ban: bool) -> bool:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE users SET is_banned = ? WHERE user_id = ?", (1 if ban else 0, user_id))
+        await db.commit()
+        return True
+
+async def get_all_users() -> list[dict]:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT user_id, username, balance, is_banned FROM users ORDER BY balance DESC LIMIT 100") as cur:
+            rows = await cur.fetchall()
+            return [dict(r) for r in rows]

@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: onyxgram-game
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: BOT_TOKEN
+        sync: false
+      - key: OWNER_ID
+        value: "2127001,289802,968937"
+      - key: API_BASE
+        value: "https://dev-angel-7553.dev"

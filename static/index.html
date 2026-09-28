@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>OnyxGram Casino 🎰🚀</title>
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="/static/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Универсальная верхняя шапка (видна всегда) -->
+    <header class="header">
+      <div class="header-main-row">
+        <div class="user-pill">
+          <button class="back-lobby-btn" id="back-lobby-btn" style="display: none;" title="В главное меню">
+            <span class="back-arrow">⬅</span>
+            <span class="back-text">Меню</span>
+          </button>
+          <div class="avatar" id="user-avatar">🎰</div>
+          <div class="user-meta">
+            <span class="user-name" id="user-name">Игрок</span>
+            <span class="balance-tag"><span id="user-balance">0</span> ⭐</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn header-nav-btn" id="open-leaderboard-btn" title="Топ заносов">🏆</button>
+          <button class="icon-btn header-nav-btn chat-trigger-btn" id="open-chat-btn" title="Онлайн чат">💬<span class="chat-dot"></span></button>
+          <button class="icon-btn" id="sound-btn" title="Звук">🔊</button>
+          <button class="admin-btn icon-btn" id="open-admin-btn" style="display: none;" title="Панель владельца">⚙️</button>
+        </div>
+      </div>
+
+      <!-- Нижняя строка шапки: Касса (Пополнение и Вывод подарков) -->
+      <div class="header-cashier-row">
+        <button class="topup-btn" id="open-topup-btn">
+          <span class="cashier-icon">⭐</span>
+          <span>Пополнить</span>
+        </button>
+        <button class="withdraw-btn" id="open-withdraw-btn">
+          <span class="cashier-icon">🎁</span>
+          <span>Вывод подарком</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ==================== ЭКРАН 1: ГЛАВНОЕ МЕНЮ (ЛОББИ) ==================== -->
+    <div class="view-screen" id="view-lobby">
+      <div class="lobby-banner">
+        <div class="casino-logo-tag">ONYX CASINO</div>
+        <h1 class="lobby-title">Выбирай игру</h1>
+        <p class="lobby-sub">Единый баланс Stars ⭐ для всех режимов. Умножай звёзды и выводи реальными подарками!</p>
+      </div>
+
+      <div class="game-cards-grid">
+        <!-- Карточка 1: РАКЕТА (CRASH) -->
+        <div class="game-card crash-card" id="card-play-crash">
+          <div class="card-badge pulse-badge">🔥 ТОП ИГРА</div>
+          <div class="card-visual">
+            <span class="card-icon rocket-float">🚀</span>
+          </div>
+          <div class="card-content">
+            <h2 class="card-title">Crash («Ракета»)</h2>
+            <p class="card-desc">Следи за полётом ракеты, множитель растёт до 100x+. Успей забрать куш до взрыва!</p>
+            <div class="card-tags">
+              <span class="tag-pill">До 100x+</span>
+              <span class="tag-pill">Авто-казик</span>
+              <span class="tag-pill online-pill">● Онлайн</span>
+            </div>
+            <button class="play-card-btn btn-crash">ИГРАТЬ В РАКЕТУ 🚀</button>
+          </div>
+        </div>
+
+        <!-- Карточка 2: СЛОТЫ 777 -->
+        <div class="game-card slots-card" id="card-play-slots">
+          <div class="card-badge gold-badge">💎 ДЖЕКПОТ 100X</div>
+          <div class="card-visual">
+            <div class="slots-reel-teaser">
+              <span class="teaser-sym">🍒</span>
+              <span class="teaser-sym highlight">7️⃣</span>
+              <span class="teaser-sym">💎</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <h2 class="card-title">Слоты 777</h2>
+            <p class="card-desc">Классический игровой автомат «Три семёрки». Крути барабаны и срывай супер-джекпот!</p>
+            <div class="card-tags">
+              <span class="tag-pill gold-tag">777 = 100X</span>
+              <span class="tag-pill">Авто-спины</span>
+              <span class="tag-pill">Моментально</span>
+            </div>
+            <button class="play-card-btn btn-slots">КРУТИТЬ СЛОТЫ 🎰</button>
+          </div>
+        </div>
+
+        <!-- Карточка 3: МИНЁР (MINES) -->
+        <div class="game-card mines-card" id="card-play-mines">
+          <div class="card-badge emerald-badge">💣 ХИТ КАЗИНО</div>
+          <div class="card-visual">
+            <div class="mines-teaser-grid">
+              <span class="m-tile m-gem">💎</span>
+              <span class="m-tile m-bomb">💣</span>
+              <span class="m-tile m-gem">💎</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <h2 class="card-title">Минёр («Mines»)</h2>
+            <p class="card-desc">Поле 5x5. Открывай алмазы, умножай куш на каждом шаге или забери выигрыш до взрыва мины!</p>
+            <div class="card-tags">
+              <span class="tag-pill emerald-tag">До 1000x+</span>
+              <span class="tag-pill">1-24 мин</span>
+              <span class="tag-pill">Cashout в любой момент</span>
+            </div>
+            <button class="play-card-btn btn-mines">ИГРАТЬ В МИНЁРА 💣</button>
+          </div>
+        </div>
+
+        <!-- Карточка 4: КОНТРАКТЫ ОБМЕНА (UPGRADE / CRAFT) -->
+        <div class="game-card upgrade-card" id="card-play-upgrade">
+          <div class="card-badge cyan-badge">⚡ НОВИНКА</div>
+          <div class="card-visual">
+            <div class="upgrade-teaser-visual">
+              <span class="up-spin-icon">⚡</span>
+              <span class="up-spin-x">100X</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <h2 class="card-title">Контракты («Upgrade»)</h2>
+            <p class="card-desc">Улучшай звёзды с шансом до 100x! Выбирай множитель, крути колесо и забирай редкий куш.</p>
+            <div class="card-tags">
+              <span class="tag-pill cyan-tag">До 100X</span>
+              <span class="tag-pill">Рулетка шанса</span>
+              <span class="tag-pill">Быстрый крафт</span>
+            </div>
+            <button class="play-card-btn btn-upgrade">АПГРЕЙД ЗВЁЗД ⚡</button>
+          </div>
+        </div>
+
+        <!-- Карточка 5: БАШНЯ (TOWER / СТУПЕНИ) -->
+        <div class="game-card tower-card" id="card-play-tower">
+          <div class="card-badge amber-badge">🏰 ХИТ ИГРА</div>
+          <div class="card-visual">
+            <div class="tower-teaser-visual">
+              <span class="tw-step-icon">🏰</span>
+              <span class="tw-step-x">до 250X</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <h2 class="card-title">Башня («Tower»)</h2>
+            <p class="card-desc">Поднимайся по 8 этажам башни! Избегай ловушек, умножай куш на каждом шаге до 250x или забери в любой момент.</p>
+            <div class="card-tags">
+              <span class="tag-pill amber-tag">До 250X</span>
+              <span class="tag-pill">8 этажей</span>
+              <span class="tag-pill">3 сложности</span>
+            </div>
+            <button class="play-card-btn btn-tower">ШТУРМОВАТЬ БАШНЮ 🏰</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="lobby-footer-card">
+        <div class="footer-feat"><span class="feat-icon">⚡</span> <span>Мгновенный вывод подарками в профиль</span></div>
+        <div class="footer-feat"><span class="feat-icon">🔒</span> <span>Честная механика (Provably Fair)</span></div>
+      </div>
+    </div>
+
+    <!-- ==================== ЭКРАН 2: CRASH («РАКЕТА») ==================== -->
+    <div class="view-screen" id="view-crash" style="display: none;">
+      <!-- История последних крашей -->
+      <div class="history-bar" id="history-bar">
+        <!-- Заполняется динамически -->
+      </div>
+
+      <!-- Игровая арена (Canvas) -->
+      <div class="arena-card">
+        <canvas id="game-canvas"></canvas>
+        
+        <!-- Оверлей множителя и статуса -->
+        <div class="overlay-center">
+          <div class="round-status" id="round-status">Ожидание...</div>
+          <div class="multiplier-display" id="multiplier-display">1.00x</div>
+          <div class="countdown-circle" id="countdown-wrapper">
+            <span id="countdown-text">5.0s</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Панель управления ставками (Ручная / Авто-казик) -->
+      <div class="control-panel">
+        <div class="mode-tabs">
+          <button class="mode-tab active" id="tab-manual" type="button">✋ Ручная игра</button>
+          <button class="mode-tab" id="tab-auto" type="button">🤖 Авто-казик</button>
+        </div>
+
+        <!-- Ручной режим -->
+        <div id="manual-controls">
+          <div class="bet-inputs-row">
+            <!-- Сумма ставки -->
+            <div class="input-card">
+              <label class="input-label">Ставка (⭐)</label>
+              <div class="input-with-actions">
+                <input type="number" id="bet-amount" value="10" min="1" max="1000000" step="1">
+                <div class="quick-adjust">
+                  <button class="adj-btn" data-action="div2">½</button>
+                  <button class="adj-btn" data-action="mul2">2×</button>
+                </div>
+              </div>
+              <div class="quick-chips">
+                <button class="chip-btn" data-val="5">+5</button>
+                <button class="chip-btn" data-val="10">+10</button>
+                <button class="chip-btn" data-val="25">+25</button>
+                <button class="chip-btn" data-val="50">+50</button>
+                <button class="chip-btn" data-val="max">MAX</button>
+              </div>
+            </div>
+
+            <!-- Авто-вывод -->
+            <div class="input-card">
+              <div class="auto-label-row">
+                <label class="input-label">Авто-вывод</label>
+                <input type="checkbox" id="auto-cashout-toggle">
+              </div>
+              <div class="input-with-actions">
+                <input type="number" id="auto-cashout-val" value="2.00" min="1.05" max="100.00" step="0.1" disabled>
+                <div class="quick-adjust">
+                  <button class="adj-btn auto-preset" data-mult="1.5">1.5×</button>
+                  <button class="adj-btn auto-preset" data-mult="2.0">2.0×</button>
+                  <button class="adj-btn auto-preset" data-mult="5.0">5.0×</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Главная кнопка действия -->
+          <button class="main-action-btn state-ready" id="main-action-btn" type="button">
+            <span class="btn-primary-text" id="btn-primary-text">СДЕЛАТЬ СТАВКУ</span>
+            <span class="btn-sub-text" id="btn-sub-text">10 ⭐</span>
+          </button>
+        </div>
+
+        <!-- Режим «Авто-казик» -->
+        <div id="auto-controls" style="display: none;">
+          <div class="bet-inputs-row">
+            <!-- Ставка авто-казика -->
+            <div class="input-card">
+              <label class="input-label">Базовая ставка (⭐)</label>
+              <div class="input-with-actions">
+                <input type="number" id="auto-bet-amount" value="10" min="1" max="1000000" step="1">
+                <div class="quick-adjust">
+                  <button class="adj-btn" data-action="auto-div2">½</button>
+                  <button class="adj-btn" data-action="auto-mul2">2×</button>
+                </div>
+              </div>
+              <div class="quick-chips">
+                <button class="chip-btn" data-val="auto-10">10</button>
+                <button class="chip-btn" data-val="auto-25">25</button>
+                <button class="chip-btn" data-val="auto-50">50</button>
+                <button class="chip-btn" data-val="auto-100">100</button>
+                <button class="chip-btn" data-val="auto-max">MAX</button>
+              </div>
+            </div>
+
+            <!-- Авто-вывод для авто-казика -->
+            <div class="input-card">
+              <label class="input-label">Забирать на X</label>
+              <div class="input-with-actions">
+                <input type="number" id="auto-target-mult" value="2.00" min="1.05" max="100.00" step="0.1">
+                <div class="quick-adjust">
+                  <button class="adj-btn auto-target-preset" data-mult="1.2">1.2×</button>
+                  <button class="adj-btn auto-target-preset" data-mult="2.0">2.0×</button>
+                  <button class="adj-btn auto-target-preset" data-mult="3.0">3.0×</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Количество раундов -->
+          <div class="rounds-picker-card">
+            <span class="rounds-picker-label">Количество раундов:</span>
+            <div class="rounds-chips">
+              <button class="rounds-chip active" data-rounds="infinity">∞</button>
+              <button class="rounds-chip" data-rounds="5">5</button>
+              <button class="rounds-chip" data-rounds="10">10</button>
+              <button class="rounds-chip" data-rounds="25">25</button>
+              <button class="rounds-chip" data-rounds="50">50</button>
+            </div>
+          </div>
+
+          <!-- Кнопка запуска Авто-казика -->
+          <button class="auto-action-btn state-auto-start" id="auto-action-btn" type="button">
+            <span class="btn-primary-text" id="auto-btn-primary">▶️ ЗАПУСТИТЬ АВТО-КАЗИК</span>
+            <span class="btn-sub-text" id="auto-btn-sub">Ставить 10 ⭐ каждый раунд (забирать на 2.00x)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Список ставок в реальном времени -->
+      <div class="live-bets-section">
+        <div class="section-header">
+          <span>👥 Игроки в раунде (<span id="players-count">0</span>)</span>
+          <span class="pool-sum">Банк: <span id="pool-sum">0</span> ⭐</span>
+        </div>
+        <div class="bets-list" id="bets-list">
+          <!-- Заполняется динамически -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== ЭКРАН 3: СЛОТЫ 777 ==================== -->
+    <div class="view-screen" id="view-slots" style="display: none;">
+      <!-- Джекпот баннер -->
+      <div class="slots-jackpot-header">
+        <div class="jackpot-glow-badge">🔥 ДЖЕКПОТ 777 🔥</div>
+        <div class="jackpot-amount-banner">100X ОТ СТАВКИ!</div>
+        <button class="paytable-btn" id="open-paytable-btn">ℹ️ Выплаты</button>
+      </div>
+
+      <!-- Игровой автомат (Reels Cabinet) -->
+      <div class="slots-cabinet">
+        <!-- Подсветка выигрышной линии -->
+        <div class="payline-indicator"></div>
+
+        <div class="reels-container" id="reels-container">
+          <!-- Барабан 1 -->
+          <div class="reel-box" id="reel-box-0">
+            <div class="reel-strip" id="reel-strip-0">
+              <div class="reel-symbol">🍒</div>
+              <div class="reel-symbol center-symbol">7️⃣</div>
+              <div class="reel-symbol">🍋</div>
+            </div>
+          </div>
+          <!-- Барабан 2 -->
+          <div class="reel-box" id="reel-box-1">
+            <div class="reel-strip" id="reel-strip-1">
+              <div class="reel-symbol">💎</div>
+              <div class="reel-symbol center-symbol">7️⃣</div>
+              <div class="reel-symbol">🔔</div>
+            </div>
+          </div>
+          <!-- Барабан 3 -->
+          <div class="reel-box" id="reel-box-2">
+            <div class="reel-strip" id="reel-strip-2">
+              <div class="reel-symbol">⭐</div>
+              <div class="reel-symbol center-symbol">7️⃣</div>
+              <div class="reel-symbol">🍇</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Статус / Выигрыш слотов -->
+      <div class="slots-win-display" id="slots-win-display">
+        <span class="win-display-title" id="slots-win-title">Сделайте ставку и нажмите КРУТИТЬ!</span>
+        <span class="win-display-amount" id="slots-win-amount" style="display: none;">+0 ⭐</span>
+      </div>
+
+      <!-- Управление ставкой в слотах -->
+      <div class="slots-control-card">
+        <div class="slots-bet-row">
+          <label class="input-label">Ставка на спин (⭐)</label>
+          <div class="input-with-actions">
+            <input type="number" id="slots-bet-amount" value="10" min="1" max="1000000" step="1">
+            <div class="quick-adjust">
+              <button class="adj-btn" id="slots-btn-div2">½</button>
+              <button class="adj-btn" id="slots-btn-mul2">2×</button>
+              <button class="adj-btn" id="slots-btn-max">MAX</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-chips">
+          <button class="chip-btn slots-chip" data-amt="5">5</button>
+          <button class="chip-btn slots-chip" data-amt="10">10</button>
+          <button class="chip-btn slots-chip" data-amt="25">25</button>
+          <button class="chip-btn slots-chip" data-amt="50">50</button>
+          <button class="chip-btn slots-chip" data-amt="100">100</button>
+          <button class="chip-btn slots-chip" data-amt="250">250</button>
+        </div>
+
+        <!-- Кнопки действия слотов -->
+        <div class="slots-actions-row">
+          <button class="slots-spin-btn" id="slots-spin-btn" type="button">
+            <span class="spin-icon">🎰</span>
+            <span class="spin-main-text" id="slots-spin-text">КРУТИТЬ (SPIN)</span>
+          </button>
+        </div>
+
+        <!-- Авто-спины -->
+        <div class="slots-auto-row">
+          <span class="auto-row-title">🤖 Авто-спины:</span>
+          <div class="auto-spins-chips">
+            <button class="auto-spin-chip" data-spins="5">5</button>
+            <button class="auto-spin-chip" data-spins="10">10</button>
+            <button class="auto-spin-chip" data-spins="25">25</button>
+            <button class="auto-spin-chip" data-spins="50">50</button>
+            <button class="auto-spin-chip" data-spins="infinity">∞</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== ЭКРАН 4: МИНЁР («MINES») ==================== -->
+    <div class="view-screen" id="view-mines" style="display: none;">
+      <!-- Статус игры / Множитель -->
+      <div class="mines-status-header">
+        <div class="mines-mult-box">
+          <span class="mines-box-lbl">Текущий X</span>
+          <span class="mines-mult-val" id="mines-cur-mult">1.00x</span>
+        </div>
+        <div class="mines-profit-box">
+          <span class="mines-box-lbl">Возможный куш</span>
+          <span class="mines-profit-val" id="mines-cur-profit">0 ⭐</span>
+        </div>
+        <div class="mines-next-box">
+          <span class="mines-box-lbl">След. шаг</span>
+          <span class="mines-next-val" id="mines-next-mult">1.09x</span>
+        </div>
+      </div>
+
+      <!-- Игровое поле 5x5 (25 клеток) -->
+      <div class="mines-board-card">
+        <div class="mines-grid" id="mines-grid">
+          <!-- 25 клеток (0..24) генерируются через JS -->
+        </div>
+      </div>
+
+      <!-- Панель управления ставкой и минами -->
+      <div class="mines-control-card">
+        <!-- Настройка ставки -->
+        <div class="mines-row">
+          <label class="input-label">Ставка (⭐)</label>
+          <div class="input-with-actions">
+            <input type="number" id="mines-bet-amount" value="10" min="1" max="1000000" step="1">
+            <div class="quick-adjust">
+              <button class="adj-btn" id="mines-btn-div2">½</button>
+              <button class="adj-btn" id="mines-btn-mul2">2×</button>
+              <button class="adj-btn" id="mines-btn-max">MAX</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-chips">
+          <button class="chip-btn mines-chip" data-amt="5">5</button>
+          <button class="chip-btn mines-chip" data-amt="10">10</button>
+          <button class="chip-btn mines-chip" data-amt="25">25</button>
+          <button class="chip-btn mines-chip" data-amt="50">50</button>
+          <button class="chip-btn mines-chip" data-amt="100">100</button>
+          <button class="chip-btn mines-chip" data-amt="250">250</button>
+        </div>
+
+        <!-- Выбор количества мин -->
+        <div class="mines-count-row">
+          <div class="mines-count-header">
+            <span class="input-label">Количество мин: <b id="mines-count-label">3</b> 💣</span>
+            <span class="mines-safe-label">Алмазов: <b id="mines-safe-count-label">22</b> 💎</span>
+          </div>
+          <div class="mines-picker-chips">
+            <button class="mines-p-chip" data-mines="1">1</button>
+            <button class="mines-p-chip active" data-mines="3">3</button>
+            <button class="mines-p-chip" data-mines="5">5</button>
+            <button class="mines-p-chip" data-mines="10">10</button>
+            <button class="mines-p-chip" data-mines="24">24 💀</button>
+          </div>
+        </div>
+
+        <!-- Главная кнопка действия (Начать игру / Забрать) -->
+        <button class="mines-action-btn state-start" id="mines-action-btn" type="button">
+          <span class="mines-btn-primary" id="mines-btn-primary">💣 НАЧАТЬ ИГРУ</span>
+          <span class="mines-btn-sub" id="mines-btn-sub">Ставка 10 ⭐ (3 мины)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== ЭКРАН 4: КОНТРАКТЫ ОБМЕНА (UPGRADE) ==================== -->
+    <div class="view-screen" id="view-upgrade" style="display: none;">
+      <div class="game-header-bar upgrade-header-bar">
+        <div class="game-title-group">
+          <span class="game-emoji">⚡</span>
+          <div>
+            <h2 class="screen-title">Контракты обмена (Upgrade)</h2>
+            <span class="screen-subtitle">Улучшай звёзды с шансом до 100x</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Центральный блок: Радиальное колесо апгрейда -->
+      <div class="upgrade-wheel-card">
+        <div class="upgrade-wheel-container">
+          <svg class="upgrade-wheel-svg" id="upgrade-wheel-svg" viewBox="0 0 260 260">
+            <!-- Фоновый круг (зона проигрыша) -->
+            <circle cx="130" cy="130" r="110" class="wheel-bg-circle" />
+            <!-- Сектор победы (зелёный/циановый) -->
+            <circle id="wheel-win-slice" class="wheel-win-slice" cx="130" cy="130" r="110" stroke-dasharray="331.75 691.15" />
+            <!-- Внутренний темный диск -->
+            <circle cx="130" cy="130" r="80" class="wheel-inner-circle" />
+          </svg>
+          
+          <!-- Вращающаяся стрелка с анимацией и эффектом затухания -->
+          <div class="wheel-pointer-pivot" id="wheel-pointer-pivot">
+            <div class="wheel-pointer-needle"></div>
+          </div>
+
+          <!-- Информационный центр колеса -->
+          <div class="wheel-center-info">
+            <span class="wheel-chance-label">Шанс успеха</span>
+            <span class="wheel-chance-val" id="upgrade-chance-val">48.0%</span>
+            <span class="wheel-payout-val" id="upgrade-payout-val">20 ⭐</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Панель управления ставкой и целевым множителем -->
+      <div class="upgrade-control-card">
+        <!-- Ставка -->
+        <div class="upgrade-row">
+          <label class="input-label">Ставка предмета (⭐)</label>
+          <div class="input-with-actions">
+            <input type="number" id="upgrade-bet-amount" value="10" min="1" max="1000000" step="1">
+            <div class="quick-adjust">
+              <button class="adj-btn" id="upgrade-btn-div2">½</button>
+              <button class="adj-btn" id="upgrade-btn-mul2">2×</button>
+              <button class="adj-btn" id="upgrade-btn-max">MAX</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-chips">
+          <button class="chip-btn upgrade-chip" data-amt="5">5</button>
+          <button class="chip-btn upgrade-chip" data-amt="10">10</button>
+          <button class="chip-btn upgrade-chip" data-amt="25">25</button>
+          <button class="chip-btn upgrade-chip" data-amt="50">50</button>
+          <button class="chip-btn upgrade-chip" data-amt="100">100</button>
+        </div>
+
+        <!-- Выбор целевого множителя -->
+        <div class="upgrade-mult-row">
+          <div class="upgrade-mult-header">
+            <span class="input-label">Целевой множитель: <b id="upgrade-mult-label">2.00x</b></span>
+            <span class="upgrade-payout-preview">Выигрыш: <b id="upgrade-profit-preview">20 ⭐</b></span>
+          </div>
+          <div class="upgrade-mult-chips">
+            <button class="up-m-chip" data-mult="1.5">1.5×</button>
+            <button class="up-m-chip active" data-mult="2.0">2.0×</button>
+            <button class="up-m-chip" data-mult="3.0">3.0×</button>
+            <button class="up-m-chip" data-mult="5.0">5.0×</button>
+            <button class="up-m-chip" data-mult="10.0">10×</button>
+            <button class="up-m-chip" data-mult="25.0">25×</button>
+            <button class="up-m-chip" data-mult="50.0">50×</button>
+            <button class="up-m-chip" data-mult="100.0">100× 🔥</button>
+          </div>
+        </div>
+
+        <!-- Главная кнопка действия (Апгрейд) -->
+        <button class="upgrade-action-btn state-ready" id="upgrade-action-btn" type="button">
+          <span class="up-btn-primary" id="up-btn-primary">⚡ УЛУЧШИТЬ ПРЕДМЕТ</span>
+          <span class="up-btn-sub" id="up-btn-sub">Шанс 48.0% | Выигрыш 20 ⭐</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== ЭКРАН 5: БАШНЯ (TOWER) ==================== -->
+    <div class="view-screen" id="view-tower" style="display: none;">
+      <div class="game-header-bar tower-header-bar">
+        <div class="game-title-group">
+          <span class="game-emoji">🏰</span>
+          <div>
+            <h2 class="screen-title">Башня («Tower»)</h2>
+            <span class="screen-subtitle">Поднимайся по 8 этажам к вершине</span>
+          </div>
+        </div>
+        <div class="tower-status-badge" id="tower-status-badge">Готов к штурму</div>
+      </div>
+
+      <!-- Игровая башня (вертикальная пирамида/лестница этажей) -->
+      <div class="tower-arena-card">
+        <div class="tower-floors-list" id="tower-floors-list">
+          <!-- Генерируется динамически через JS: этажи 8 .. 1 сверху вниз -->
+        </div>
+      </div>
+
+      <!-- Панель управления -->
+      <div class="tower-control-card">
+        <!-- Ставка -->
+        <div class="tower-bet-row">
+          <label class="input-label">Ставка (⭐)</label>
+          <div class="input-with-actions">
+            <input type="number" id="tower-bet-amount" value="10" min="1" max="1000000" step="1">
+            <div class="quick-adjust">
+              <button class="adj-btn" id="tower-btn-div2">½</button>
+              <button class="adj-btn" id="tower-btn-mul2">2×</button>
+              <button class="adj-btn" id="tower-btn-max">MAX</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-chips">
+          <button class="chip-btn tower-chip" data-amt="5">5</button>
+          <button class="chip-btn tower-chip" data-amt="10">10</button>
+          <button class="chip-btn tower-chip" data-amt="25">25</button>
+          <button class="chip-btn tower-chip" data-amt="50">50</button>
+          <button class="chip-btn tower-chip" data-amt="100">100</button>
+        </div>
+
+        <!-- Выбор сложности башни -->
+        <div class="tower-diff-row">
+          <div class="tower-diff-header">
+            <span class="input-label">Сложность: <b id="tower-diff-label">Средняя (3)</b></span>
+            <span class="tower-max-mult-preview">Макс куш: <b id="tower-max-win-label">25.0x (250 ⭐)</b></span>
+          </div>
+          <div class="tower-diff-chips">
+            <button class="t-diff-chip" data-diff="easy">🟢 Лёгкая (4)</button>
+            <button class="t-diff-chip active" data-diff="medium">🟡 Средняя (3)</button>
+            <button class="t-diff-chip" data-diff="hard">🔴 Хард (2)</button>
+          </div>
+        </div>
+
+        <!-- Главная кнопка действия (Начать игру / Забрать куш) -->
+        <button class="tower-action-btn state-start" id="tower-action-btn" type="button">
+          <span class="tower-btn-primary" id="tower-btn-primary">🏰 НАЧАТЬ ШТУРМ</span>
+          <span class="tower-btn-sub" id="tower-btn-sub">Ставка 10 ⭐ | 8 этажей</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== МОДАЛЬНЫЕ ОКНА ==================== -->
+
+  <!-- Модалка Таблицы выплат слотов -->
+  <div class="modal-overlay" id="paytable-modal">
+    <div class="modal-box">
+      <h3>🎰 Таблица выплат «Слоты 777»</h3>
+      <p class="modal-desc">Выигрыши начисляются по центральной горизонтальной линии:</p>
+      <div class="paytable-list">
+        <div class="pay-row jackpot-pay-row">
+          <span class="pay-symbols">7️⃣ 7️⃣ 7️⃣</span>
+          <span class="pay-mult">100X</span>
+          <span class="pay-title">🔥 ДЖЕКПОТ!</span>
+        </div>
+        <div class="pay-row">
+          <span class="pay-symbols">⭐ ⭐ ⭐</span>
+          <span class="pay-mult">50X</span>
+          <span class="pay-title">Звёздный куш</span>
+        </div>
+        <div class="pay-row">
+          <span class="pay-symbols">💎 💎 💎</span>
+          <span class="pay-mult">30X</span>
+          <span class="pay-title">Алмазы</span>
+        </div>
+        <div class="pay-row">
+          <span class="pay-symbols">🔔 🔔 🔔</span>
+          <span class="pay-mult">20X</span>
+          <span class="pay-title">Колокольчики</span>
+        </div>
+        <div class="pay-row">
+          <span class="pay-symbols">🍇 🍇 🍇</span>
+          <span class="pay-mult">12X</span>
+          <span class="pay-title">Виноград</span>
+        </div>
+        <div class="pay-row">
+          <span class="pay-symbols">🍋 🍋 🍋</span>
+          <span class="pay-mult">8X</span>
+          <span class="pay-title">Лимоны</span>
+        </div>
+        <div class="pay-row">
+          <span class="pay-symbols">🍒 🍒 🍒</span>
+          <span class="pay-mult">5X</span>
+          <span class="pay-title">Тройная вишня</span>
+        </div>
+        <div class="pay-row sub-pay-row">
+          <span class="pay-symbols">7️⃣ 7️⃣ Любые</span>
+          <span class="pay-mult">3X</span>
+          <span class="pay-title">Две семёрки</span>
+        </div>
+        <div class="pay-row sub-pay-row">
+          <span class="pay-symbols">⭐ ⭐ Любые</span>
+          <span class="pay-mult">2X</span>
+          <span class="pay-title">Две звезды</span>
+        </div>
+        <div class="pay-row sub-pay-row">
+          <span class="pay-symbols">🍒 🍒 Любые</span>
+          <span class="pay-mult">1.5X</span>
+          <span class="pay-title">Две вишни</span>
+        </div>
+        <div class="pay-row sub-pay-row">
+          <span class="pay-symbols">🍒 1-й барабан</span>
+          <span class="pay-mult">1.0X</span>
+          <span class="pay-title">Возврат</span>
+        </div>
+      </div>
+      <button class="close-modal-btn" id="close-paytable-btn">Закрыть</button>
+    </div>
+  </div>
+
+  <!-- Модальное окно пополнения (Stars / Инвойс) -->
+  <div class="modal-overlay" id="topup-modal">
+    <div class="modal-box">
+      <h3>Пополнение баланса Stars ⭐</h3>
+      <p class="modal-desc">Выберите количество Telegram / OnyxGram Stars для оплаты через официальный инвойс:</p>
+      <div class="modal-grid">
+        <button class="modal-chip real-topup-btn" data-stars="10">10 ⭐</button>
+        <button class="modal-chip real-topup-btn" data-stars="25">25 ⭐</button>
+        <button class="modal-chip real-topup-btn" data-stars="50">50 ⭐</button>
+        <button class="modal-chip real-topup-btn" data-stars="100">100 ⭐</button>
+        <button class="modal-chip real-topup-btn" data-stars="250">250 ⭐</button>
+        <button class="modal-chip real-topup-btn" data-stars="500">500 ⭐</button>
+      </div>
+      <button class="close-modal-btn" id="close-topup-btn">Закрыть</button>
+    </div>
+  </div>
+
+  <!-- Модальное окно вывода подарками OnyxGram -->
+  <div class="modal-overlay" id="withdraw-modal">
+    <div class="modal-box">
+      <h3>🎁 Вывод подарками OnyxGram</h3>
+      <p class="modal-desc">Выберите подарок — бот моментально отправит его в ваш профиль OnyxGram:</p>
+      <div class="gifts-grid">
+        <div class="gift-card" data-cost="15" data-name="Teddy Bear" data-gift-id="5170233102089322756">
+          <div class="gift-icon">🧸</div>
+          <div class="gift-title">Teddy Bear</div>
+          <button class="gift-buy-btn">15 ⭐</button>
+        </div>
+        <div class="gift-card" data-cost="25" data-name="Magic Box" data-gift-id="5170250947678437525">
+          <div class="gift-icon">🎁</div>
+          <div class="gift-title">Magic Box</div>
+          <button class="gift-buy-btn">25 ⭐</button>
+        </div>
+        <div class="gift-card" data-cost="50" data-name="Space Rocket" data-gift-id="5170564780938756245">
+          <div class="gift-icon">🚀</div>
+          <div class="gift-title">Space Rocket</div>
+          <button class="gift-buy-btn">50 ⭐</button>
+        </div>
+        <div class="gift-card" data-cost="100" data-name="Diamond" data-gift-id="5170521118301225164">
+          <div class="gift-icon">💎</div>
+          <div class="gift-title">Diamond</div>
+          <button class="gift-buy-btn">100 ⭐</button>
+        </div>
+        <div class="gift-card" data-cost="100" data-name="Golden Trophy" data-gift-id="5168043875654172773">
+          <div class="gift-icon">🏆</div>
+          <div class="gift-title">Trophy</div>
+          <button class="gift-buy-btn">100 ⭐</button>
+        </div>
+        <div class="gift-card" data-cost="500" data-name="Cupid Charm" data-gift-id="5868561433997870501">
+          <div class="gift-icon">🏹</div>
+          <div class="gift-title">Cupid Charm</div>
+          <button class="gift-buy-btn">500 ⭐</button>
+        </div>
+      </div>
+      <button class="close-modal-btn" id="close-withdraw-btn">Закрыть</button>
+    </div>
+  </div>
+
+  <!-- Модальное окно Админ-панели -->
+  <div class="modal-overlay" id="admin-modal">
+    <div class="modal-box admin-modal-box">
+      <div class="admin-header">
+        <h3>👑 Панель владельца</h3>
+        <span class="admin-badge">Admin</span>
+      </div>
+
+      <!-- Статистика -->
+      <div class="admin-stats-grid">
+        <div class="admin-stat-card">
+          <span class="stat-label">Профит казино</span>
+          <span class="stat-val profit-val" id="adm-net-profit">0 ⭐</span>
+        </div>
+        <div class="admin-stat-card">
+          <span class="stat-label">Игроков</span>
+          <span class="stat-val" id="adm-users-cnt">0</span>
+        </div>
+        <div class="admin-stat-card">
+          <span class="stat-label">Crash ставки</span>
+          <span class="stat-val" id="adm-crash-bets-cnt">0 ⭐</span>
+        </div>
+        <div class="admin-stat-card">
+          <span class="stat-label">Слоты ставки</span>
+          <span class="stat-val" id="adm-slots-bets-cnt">0 ⭐</span>
+        </div>
+        <div class="admin-stat-card">
+          <span class="stat-label">Минёр ставки</span>
+          <span class="stat-val" id="adm-mines-bets-cnt">0 ⭐</span>
+        </div>
+        <div class="admin-stat-card">
+          <span class="stat-label">Башня ставки</span>
+          <span class="stat-val" id="adm-tower-bets-cnt">0 ⭐</span>
+        </div>
+      </div>
+
+      <!-- Навигация по вкладкам Админ-панели -->
+      <div class="admin-tabs-bar">
+        <button class="adm-tab-pill active" data-tab="adm-tab-global">⚡ Главная</button>
+        <button class="adm-tab-pill" data-tab="adm-tab-crash">🚀 Ракета</button>
+        <button class="adm-tab-pill" data-tab="adm-tab-slots">🎰 Слоты</button>
+        <button class="adm-tab-pill" data-tab="adm-tab-mines">💣 Минёр</button>
+        <button class="adm-tab-pill" data-tab="adm-tab-upgrade">⚡ Upgrade</button>
+        <button class="adm-tab-pill" data-tab="adm-tab-tower">🏰 Башня</button>
+        <button class="adm-tab-pill" data-tab="adm-tab-chat">💬 Чат</button>
+      </div>
+
+      <div class="admin-tabs-content">
+        <!-- ВКЛАДКА 1: ГЛАВНАЯ / ОБЩЕЕ -->
+        <div class="adm-tab-pane active" id="adm-tab-global">
+          <!-- 1. Начислить звёзды себе -->
+          <div class="admin-section">
+            <label class="admin-sec-title">💰 Начислить звёзды себе на баланс</label>
+            <div class="admin-quick-pills">
+              <button class="adm-pill adm-add-stars-btn" data-amt="100">+100 ⭐</button>
+              <button class="adm-pill adm-add-stars-btn" data-amt="500">+500 ⭐</button>
+              <button class="adm-pill adm-add-stars-btn" data-amt="1000">+1 000 ⭐</button>
+              <button class="adm-pill adm-add-stars-btn" data-amt="5000">+5 000 ⭐</button>
+              <button class="adm-pill adm-add-stars-btn" data-amt="10000">+10k ⭐</button>
+            </div>
+            <div class="admin-row" style="margin-top: 6px;">
+              <input type="number" id="adm-custom-stars-amt" placeholder="Своя сумма" min="1" step="1">
+              <button class="adm-action-btn" id="adm-add-custom-stars-btn">+ Выдать</button>
+            </div>
+          </div>
+
+          <!-- 2. МАСТЕР-RTP: УПРАВЛЕНИЕ ВСЕМИ ИГРАМИ СРАЗУ -->
+          <div class="admin-section master-rtp-section">
+            <div class="admin-flex-row">
+              <label class="admin-sec-title">⚡ Мастер-RTP (Все игры сразу)</label>
+              <span class="admin-rtp-tag" id="adm-master-rtp-tag">96%</span>
+            </div>
+            <span class="admin-sec-sub">Выставить отдачу одновременно для Краша, Слотов, Минёра, Upgrade и Башни:</span>
+            <div class="admin-segmented rtp-segmented-grid">
+              <button class="seg-btn-global active" data-mode="normal">Честный 96%</button>
+              <button class="seg-btn-global" data-mode="greedy">Жадный 75%</button>
+              <button class="seg-btn-global btn-amber-rtp" data-mode="hard_50">⚡ Жесткий 50%</button>
+              <button class="seg-btn-global btn-orange-rtp" data-mode="trap_20">🪤 Капкан 20%</button>
+              <button class="seg-btn-global btn-super-greedy" data-mode="super_greedy_5">💀 Супер-жадный 5%</button>
+              <button class="seg-btn-global btn-boost-rtp" data-mode="boost">🎉 Буст 130%</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ВКЛАДКА 2: CRASH («РАКЕТА») -->
+        <div class="adm-tab-pane" id="adm-tab-crash">
+          <div class="admin-section">
+            <label class="admin-sec-title">🚀 Управление Crash («Ракета»)</label>
+            <!-- Моментальный взрыв -->
+            <button class="adm-kill-btn" id="adm-instant-kill-btn">
+              💥 ВЗОРВАТЬ РАКЕТУ ПРЯМО СЕЙЧАС (КРАШ)
+            </button>
+
+            <!-- Задать краш -->
+            <div class="admin-row" style="margin-top: 8px;">
+              <input type="number" id="adm-crash-val" placeholder="Краш X (напр. 1.20)" step="0.1" min="1.01">
+              <button class="adm-action-btn" id="adm-set-crash-btn">Применить</button>
+            </div>
+            <div class="admin-quick-pills">
+              <button class="adm-pill adm-crash-pill" data-crash="1.05">1.05x (Слив)</button>
+              <button class="adm-pill adm-crash-pill" data-crash="2.00">2.00x</button>
+              <button class="adm-pill adm-crash-pill" data-crash="5.00">5.00x</button>
+              <button class="adm-pill adm-crash-pill" data-crash="25.00">25.0x 🚀</button>
+            </div>
+
+            <span class="admin-sec-sub" style="margin-top: 8px;">RTP Ракеты:</span>
+            <div class="admin-segmented rtp-segmented-grid">
+              <button class="seg-btn active" id="adm-rig-normal" data-mode="normal">96% Честный</button>
+              <button class="seg-btn" id="adm-rig-greedy" data-mode="greedy">75% Жадный</button>
+              <button class="seg-btn btn-amber-rtp" id="adm-rig-hard_50" data-mode="hard_50">50% Жесткий</button>
+              <button class="seg-btn btn-orange-rtp" id="adm-rig-trap_20" data-mode="trap_20">20% Капкан</button>
+              <button class="seg-btn btn-super-greedy" id="adm-rig-super_greedy_5" data-mode="super_greedy_5">💀 5% Супер</button>
+              <button class="seg-btn btn-boost-rtp" id="adm-rig-boost" data-mode="boost">130% Буст</button>
+            </div>
+
+            <div class="admin-flex-row" style="margin-top: 8px;">
+              <span>🤖 Боты в Crash раунде:</span>
+              <button class="toggle-btn" id="adm-toggle-bots-btn">ВКЛ</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ВКЛАДКА 3: СЛОТЫ 777 -->
+        <div class="adm-tab-pane" id="adm-tab-slots">
+          <div class="admin-section">
+            <label class="admin-sec-title">🎰 Управление Слотами 777</label>
+            <span class="admin-sec-sub">Принудительный результат следующего спина:</span>
+            <div class="admin-quick-pills">
+              <button class="adm-pill adm-slot-force-btn btn-jackpot-pill" data-force="777">🔥 777 (ДЖЕКПОТ 100x)</button>
+              <button class="adm-pill adm-slot-force-btn" data-force="win">💎 Выигрыш</button>
+              <button class="adm-pill adm-slot-force-btn" data-force="loss">💀 Слив</button>
+              <button class="adm-pill adm-slot-force-btn" data-force="reset">🎲 Сброс (Рандом)</button>
+            </div>
+            <span class="admin-sec-sub" style="margin-top: 8px;">RTP Слотов:</span>
+            <div class="admin-segmented rtp-segmented-grid">
+              <button class="seg-btn-slots active" id="adm-slots-rig-normal" data-mode="normal">96% Честный</button>
+              <button class="seg-btn-slots" id="adm-slots-rig-greedy" data-mode="greedy">75% Жадный</button>
+              <button class="seg-btn-slots btn-amber-rtp" id="adm-slots-rig-hard_50" data-mode="hard_50">50% Жесткий</button>
+              <button class="seg-btn-slots btn-orange-rtp" id="adm-slots-rig-trap_20" data-mode="trap_20">20% Капкан</button>
+              <button class="seg-btn-slots btn-super-greedy" id="adm-slots-rig-super_greedy_5" data-mode="super_greedy_5">💀 5% Супер</button>
+              <button class="seg-btn-slots btn-boost-rtp" id="adm-slots-rig-boost" data-mode="boost">130% Буст</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ВКЛАДКА 4: МИНЁР (LIVE) -->
+        <div class="adm-tab-pane" id="adm-tab-mines">
+          <div class="admin-section">
+            <div class="admin-flex-row">
+              <label class="admin-sec-title">💣 Онлайн мониторинг Минёра (Live)</label>
+              <span class="admin-live-badge">🟢 В игре: <b id="adm-mines-live-count">0</b></span>
+            </div>
+            <span class="admin-sec-sub">Активные игроки на минном поле прямо сейчас:</span>
+            
+            <div class="adm-mines-live-table-wrap">
+              <div class="adm-mines-live-list" id="adm-mines-live-list">
+                <div class="adm-empty-list">Сейчас никто не играет в минёре</div>
+              </div>
+            </div>
+
+            <span class="admin-sec-sub" style="margin-top: 10px;">Глобальное вмешательство (для ВСЕХ игроков минёра):</span>
+            <div class="admin-quick-pills">
+              <button class="adm-pill adm-mines-force-btn btn-danger-pill" data-force="mine">💥 Взорвать на след. клике</button>
+              <button class="adm-pill adm-mines-force-btn btn-success-pill" data-force="gem">💎 Дать алмаз</button>
+              <button class="adm-pill adm-mines-force-btn" data-force="reset">🎲 Сброс</button>
+            </div>
+
+            <span class="admin-sec-sub" style="margin-top: 8px;">RTP Минёра:</span>
+            <div class="admin-segmented rtp-segmented-grid">
+              <button class="seg-btn-mines active" id="adm-mines-rig-normal" data-mode="normal">96% Честный</button>
+              <button class="seg-btn-mines" id="adm-mines-rig-greedy" data-mode="greedy">75% Жадный</button>
+              <button class="seg-btn-mines btn-amber-rtp" id="adm-mines-rig-hard_50" data-mode="hard_50">50% Жесткий</button>
+              <button class="seg-btn-mines btn-orange-rtp" id="adm-mines-rig-trap_20" data-mode="trap_20">20% Капкан</button>
+              <button class="seg-btn-mines btn-super-greedy" id="adm-mines-rig-super_greedy_5" data-mode="super_greedy_5">💀 5% Супер</button>
+              <button class="seg-btn-mines btn-boost-rtp" id="adm-mines-rig-boost" data-mode="boost">130% Буст</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ВКЛАДКА 5: UPGRADE -->
+        <div class="adm-tab-pane" id="adm-tab-upgrade">
+          <div class="admin-section">
+            <label class="admin-sec-title">⚡ Управление Апгрейдом (Upgrade / Craft)</label>
+            <span class="admin-sec-sub">Принудительный исход следующего апгрейда:</span>
+            <div class="admin-quick-pills">
+              <button class="adm-pill adm-up-force-btn btn-success-pill" data-force="win">💎 100% Успех (Win)</button>
+              <button class="adm-pill adm-up-force-btn btn-danger-pill" data-force="loss">💀 100% Слив (Loss)</button>
+              <button class="adm-pill adm-up-force-btn" data-force="reset">🎲 Сброс (Рандом)</button>
+            </div>
+            <span class="admin-sec-sub" style="margin-top: 8px;">RTP Апгрейда:</span>
+            <div class="admin-segmented rtp-segmented-grid">
+              <button class="seg-btn-upgrade active" id="adm-up-rig-normal" data-mode="normal">96% Честный</button>
+              <button class="seg-btn-upgrade" id="adm-up-rig-greedy" data-mode="greedy">75% Жадный</button>
+              <button class="seg-btn-upgrade btn-amber-rtp" id="adm-up-rig-hard_50" data-mode="hard_50">50% Жесткий</button>
+              <button class="seg-btn-upgrade btn-orange-rtp" id="adm-up-rig-trap_20" data-mode="trap_20">20% Капкан</button>
+              <button class="seg-btn-upgrade btn-super-greedy" id="adm-up-rig-super_greedy_5" data-mode="super_greedy_5">💀 5% Супер</button>
+              <button class="seg-btn-upgrade btn-boost-rtp" id="adm-up-rig-boost" data-mode="boost">130% Буст</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ВКЛАДКА 6: БАШНЯ (TOWER) -->
+        <div class="adm-tab-pane" id="adm-tab-tower">
+          <div class="admin-section">
+            <label class="admin-sec-title">🏰 Управление Башней («Tower»)</label>
+            <span class="admin-sec-sub">Принудительный исход следующего шага:</span>
+            <div class="admin-quick-pills">
+              <button class="adm-pill adm-tower-force-btn btn-success-pill" data-force="safe">💎 100% Алмаз (Безопасно)</button>
+              <button class="adm-pill adm-tower-force-btn btn-danger-pill" data-force="trap">💀 100% Ловушка (Слив)</button>
+              <button class="adm-pill adm-tower-force-btn" data-force="reset">🎲 Сброс (Рандом)</button>
+            </div>
+            <span class="admin-sec-sub" style="margin-top: 8px;">RTP Башни:</span>
+            <div class="admin-segmented rtp-segmented-grid">
+              <button class="seg-btn-tower active" id="adm-tower-rig-normal" data-mode="normal">96% Честный</button>
+              <button class="seg-btn-tower" id="adm-tower-rig-greedy" data-mode="greedy">75% Жадный</button>
+              <button class="seg-btn-tower btn-amber-rtp" id="adm-tower-rig-hard_50" data-mode="hard_50">50% Жесткий</button>
+              <button class="seg-btn-tower btn-orange-rtp" id="adm-tower-rig-trap_20" data-mode="trap_20">20% Капкан</button>
+              <button class="seg-btn-tower btn-super-greedy" id="adm-tower-rig-super_greedy_5" data-mode="super_greedy_5">💀 5% Супер</button>
+              <button class="seg-btn-tower btn-boost-rtp" id="adm-tower-rig-boost" data-mode="boost">130% Буст</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ВКЛАДКА 7: ОНЛАЙН-ЧАТ -->
+        <div class="adm-tab-pane" id="adm-tab-chat">
+          <div class="admin-section">
+            <label class="admin-sec-title">💬 Управление Чатом игроков</label>
+            <div class="admin-flex-row" style="margin-top: 6px;">
+              <span>🤖 Сообщения ботов в чате:</span>
+              <button class="toggle-btn" id="adm-toggle-chat-bots-btn">ВКЛ</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="close-modal-btn" id="close-admin-btn">Закрыть</button>
+    </div>
+  </div>
+
+  <!-- Модальное окно Зала славы (Топ заносов) -->
+  <div class="modal-overlay" id="leaderboard-modal">
+    <div class="modal-box leaderboard-modal-box">
+      <div class="admin-header">
+        <h3>🏆 Зал славы: Топ заносов</h3>
+        <span class="admin-badge gold-badge">Live</span>
+      </div>
+      <p class="modal-desc">Крупнейшие выигрыши игроков за последнее время:</p>
+      
+      <div class="leaderboard-tabs">
+        <button class="lead-tab active" id="lead-tab-day" data-period="day">📅 Сегодня</button>
+        <button class="lead-tab" id="lead-tab-week" data-period="week">🗓 За неделю</button>
+      </div>
+
+      <div class="leaderboard-list" id="leaderboard-list">
+        <!-- Заполняется динамически через JS -->
+      </div>
+      
+      <button class="close-modal-btn" id="close-leaderboard-btn">Закрыть</button>
+    </div>
+  </div>
+
+  <!-- Выдвижной Онлайн-чат игроков -->
+  <div class="chat-drawer-overlay" id="chat-drawer-overlay">
+    <div class="chat-drawer" id="chat-drawer">
+      <div class="chat-header">
+        <div class="chat-header-title">
+          <span>💬 Чат игроков</span>
+          <span class="chat-online-badge">🟢 <b id="chat-online-count">138</b> в сети</span>
+        </div>
+        <button class="chat-close-btn" id="chat-close-btn">✕</button>
+      </div>
+
+      <!-- Список сообщений -->
+      <div class="chat-messages" id="chat-messages-list">
+        <!-- Сообщения чата загружаются динамически -->
+      </div>
+
+      <!-- Быстрые реакции и форма ввода -->
+      <div class="chat-footer">
+        <div class="chat-quick-emojis">
+          <button class="emoji-chip" data-emoji="🔥">🔥</button>
+          <button class="emoji-chip" data-emoji="🚀">🚀</button>
+          <button class="emoji-chip" data-emoji="💎">💎</button>
+          <button class="emoji-chip" data-emoji="💣">💣</button>
+          <button class="emoji-chip" data-emoji="⚡">⚡</button>
+          <button class="emoji-chip" data-emoji="🍀">🍀</button>
+        </div>
+        <form class="chat-input-form" id="chat-form">
+          <input type="text" id="chat-input-text" placeholder="Написать в чат..." maxlength="160" autocomplete="off">
+          <button type="submit" class="chat-send-btn" id="chat-send-btn">➤</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Уведомление Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="/static/game.js"></script>
+</body>
+</html>
