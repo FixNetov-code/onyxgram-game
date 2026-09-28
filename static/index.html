@@ -28,6 +28,7 @@
         <div class="header-actions">
           <button class="icon-btn header-nav-btn" id="open-leaderboard-btn" title="Топ заносов">🏆</button>
           <button class="icon-btn header-nav-btn chat-trigger-btn" id="open-chat-btn" title="Онлайн чат">💬<span class="chat-dot"></span></button>
+          <button class="icon-btn header-nav-btn" id="open-promo-btn" title="Промокод">🎟️</button>
           <button class="icon-btn" id="sound-btn" title="Звук">🔊</button>
           <button class="admin-btn icon-btn" id="open-admin-btn" style="display: none;" title="Панель владельца">⚙️</button>
         </div>
@@ -156,6 +157,48 @@
               <span class="tag-pill">3 сложности</span>
             </div>
             <button class="play-card-btn btn-tower">ШТУРМОВАТЬ БАШНЮ 🏰</button>
+          </div>
+        </div>
+
+        <!-- Карточка 6: МОНЕТКА (COINFLIP) -->
+        <div class="game-card coinflip-card" id="card-play-coinflip">
+          <div class="card-badge yellow-badge">🪙 x1000 СЕРИЯ 🔥</div>
+          <div class="card-visual">
+            <div class="coinflip-teaser-visual">
+              <span class="cf-spin-icon">🪙</span>
+              <span class="cf-spin-x">x1.95+</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <h2 class="card-title">Монетка («Coinflip»)</h2>
+            <p class="card-desc">Орёл или Решка! Угадывай сторону монеты, собирай серии побед с множителем x1.95 на каждом шаге!</p>
+            <div class="card-tags">
+              <span class="tag-pill yellow-tag">50 / 50</span>
+              <span class="tag-pill">Серии кушей</span>
+              <span class="tag-pill">Cashout в любой момент</span>
+            </div>
+            <button class="play-card-btn btn-coinflip">БРОСИТЬ МОНЕТУ 🪙</button>
+          </div>
+        </div>
+
+        <!-- Карточка 7: ПЛИНКО (PLINKO) -->
+        <div class="game-card plinko-card" id="card-play-plinko">
+          <div class="card-badge red-badge">🔴 ДО 110X 💥</div>
+          <div class="card-visual">
+            <div class="plinko-teaser-visual">
+              <span class="pl-peg-icon">🔴</span>
+              <span class="pl-peg-x">110X</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <h2 class="card-title">Плинко («Plinko»)</h2>
+            <p class="card-desc">Шарик падает сквозь пирамиду препятствий в ячейки с множителями до 110x. 3 уровня риска!</p>
+            <div class="card-tags">
+              <span class="tag-pill red-tag">До 110X</span>
+              <span class="tag-pill">10 рядов</span>
+              <span class="tag-pill">3 режима риска</span>
+            </div>
+            <button class="play-card-btn btn-plinko">ИГРАТЬ В ПЛИНКО 🔴</button>
           </div>
         </div>
       </div>
@@ -623,6 +666,178 @@
         </button>
       </div>
     </div>
+
+    <!-- ==================== ЭКРАН 6: МОНЕТКА (COINFLIP) ==================== -->
+    <div class="view-screen" id="view-coinflip" style="display: none;">
+      <div class="game-header-bar coinflip-header-bar">
+        <div class="game-title-group">
+          <span class="game-emoji">🪙</span>
+          <div>
+            <h2 class="screen-title">Монетка («Coinflip»)</h2>
+            <span class="screen-subtitle">Орёл или Решка • x1.95 за каждый шаг</span>
+          </div>
+        </div>
+        <div class="coinflip-status-badge" id="coinflip-status-badge">Готов к броску</div>
+      </div>
+
+      <!-- Арена 3D монеты и серии побед -->
+      <div class="coinflip-arena-card">
+        <div class="coinflip-series-bar" id="coinflip-series-bar">
+          <span class="series-step active" id="cf-step-0">1x</span>
+          <span class="series-arrow">➔</span>
+          <span class="series-step" id="cf-step-1">x1.95</span>
+          <span class="series-arrow">➔</span>
+          <span class="series-step" id="cf-step-2">x3.80</span>
+          <span class="series-arrow">➔</span>
+          <span class="series-step" id="cf-step-3">x7.41</span>
+          <span class="series-arrow">➔</span>
+          <span class="series-step" id="cf-step-4">x14.46</span>
+          <span class="series-arrow">➔</span>
+          <span class="series-step" id="cf-step-5">x28.19</span>
+        </div>
+
+        <div class="coin-container">
+          <div class="coin-3d" id="coin-3d">
+            <div class="coin-side coin-front">
+              <div class="coin-inner">
+                <span class="coin-symbol">🦅</span>
+                <span class="coin-label">ОРЁЛ</span>
+              </div>
+            </div>
+            <div class="coin-side coin-back">
+              <div class="coin-inner">
+                <span class="coin-symbol">👑</span>
+                <span class="coin-label">РЕШКА</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="coinflip-info-row">
+          <div class="cf-info-box">
+            <span class="cf-info-title">Серия</span>
+            <span class="cf-info-val" id="coinflip-streak-val">0</span>
+          </div>
+          <div class="cf-info-box">
+            <span class="cf-info-title">Множитель</span>
+            <span class="cf-info-val gold-val" id="coinflip-mult-val">1.00x</span>
+          </div>
+          <div class="cf-info-box">
+            <span class="cf-info-title">Текущий куш</span>
+            <span class="cf-info-val green-val" id="coinflip-pot-val">0 ⭐</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Панель управления ставкой и выбором -->
+      <div class="coinflip-control-card">
+        <!-- Ставка -->
+        <div class="coinflip-bet-row">
+          <label class="input-label">Ставка (⭐)</label>
+          <div class="input-with-actions">
+            <input type="number" id="coinflip-bet-amount" value="10" min="1" max="1000000" step="1">
+            <div class="quick-adjust">
+              <button class="adj-btn" id="coinflip-btn-div2">½</button>
+              <button class="adj-btn" id="coinflip-btn-mul2">2×</button>
+              <button class="adj-btn" id="coinflip-btn-max">MAX</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-chips">
+          <button class="chip-btn coinflip-chip" data-amt="5">5</button>
+          <button class="chip-btn coinflip-chip" data-amt="10">10</button>
+          <button class="chip-btn coinflip-chip" data-amt="25">25</button>
+          <button class="chip-btn coinflip-chip" data-amt="50">50</button>
+          <button class="chip-btn coinflip-chip" data-amt="100">100</button>
+        </div>
+
+        <!-- Выбор стороны монеты -->
+        <div class="coinflip-choice-row">
+          <button class="cf-choice-btn active" id="cf-choice-heads" data-choice="heads" type="button">
+            <span class="cf-c-icon">🦅</span>
+            <span class="cf-c-name">ОРЁЛ</span>
+          </button>
+          <button class="cf-choice-btn" id="cf-choice-tails" data-choice="tails" type="button">
+            <span class="cf-c-icon">👑</span>
+            <span class="cf-c-name">РЕШКА</span>
+          </button>
+        </div>
+
+        <!-- Кнопки действий -->
+        <div class="coinflip-action-btns">
+          <button class="coinflip-flip-btn" id="coinflip-flip-btn" type="button">
+            <span class="cf-btn-primary" id="cf-btn-primary">🪙 БРОСИТЬ МОНЕТУ</span>
+            <span class="cf-btn-sub" id="cf-btn-sub">Ставка 10 ⭐ • Победа 19.5 ⭐</span>
+          </button>
+          <button class="coinflip-cashout-btn" id="coinflip-cashout-btn" type="button" style="display: none;">
+            <span>💰 ЗАБРАТЬ <b id="cf-cashout-val">0 ⭐</b></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== ЭКРАН 7: ПЛИНКО (PLINKO) ==================== -->
+    <div class="view-screen" id="view-plinko" style="display: none;">
+      <div class="game-header-bar plinko-header-bar">
+        <div class="game-title-group">
+          <span class="game-emoji">🔴</span>
+          <div>
+            <h2 class="screen-title">Плинко («Plinko»)</h2>
+            <span class="screen-subtitle">10 рядов пирамиды • Выигрыш до 110X</span>
+          </div>
+        </div>
+        <div class="plinko-status-badge" id="plinko-status-badge">Готов к пуску</div>
+      </div>
+
+      <!-- Canvas арена Plinko -->
+      <div class="plinko-arena-card">
+        <canvas id="plinko-canvas" width="380" height="390"></canvas>
+      </div>
+
+      <!-- Панель управления Plinko -->
+      <div class="plinko-control-card">
+        <!-- Ставка -->
+        <div class="plinko-bet-row">
+          <label class="input-label">Ставка (⭐)</label>
+          <div class="input-with-actions">
+            <input type="number" id="plinko-bet-amount" value="10" min="1" max="1000000" step="1">
+            <div class="quick-adjust">
+              <button class="adj-btn" id="plinko-btn-div2">½</button>
+              <button class="adj-btn" id="plinko-btn-mul2">2×</button>
+              <button class="adj-btn" id="plinko-btn-max">MAX</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-chips">
+          <button class="chip-btn plinko-chip" data-amt="5">5</button>
+          <button class="chip-btn plinko-chip" data-amt="10">10</button>
+          <button class="chip-btn plinko-chip" data-amt="25">25</button>
+          <button class="chip-btn plinko-chip" data-amt="50">50</button>
+          <button class="chip-btn plinko-chip" data-amt="100">100</button>
+        </div>
+
+        <!-- Уровень риска -->
+        <div class="plinko-risk-row">
+          <div class="plinko-risk-header">
+            <span class="input-label">Уровень риска: <b id="plinko-risk-label">Средний</b></span>
+            <span class="plinko-max-preview">Макс куш: <b id="plinko-max-win-label">22.0x (220 ⭐)</b></span>
+          </div>
+          <div class="plinko-risk-chips">
+            <button class="p-risk-chip" data-risk="low" type="button">🟢 Низкий (8.9x)</button>
+            <button class="p-risk-chip active" data-risk="medium" type="button">🟡 Средний (22x)</button>
+            <button class="p-risk-chip" data-risk="high" type="button">🔴 Высокий (110x)</button>
+          </div>
+        </div>
+
+        <!-- Кнопка броска шарика -->
+        <button class="plinko-drop-btn" id="plinko-drop-btn" type="button">
+          <span class="plinko-btn-primary" id="plinko-btn-primary">🔴 БРОСИТЬ ШАРИК</span>
+          <span class="plinko-btn-sub" id="plinko-btn-sub">Ставка 10 ⭐</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- ==================== МОДАЛЬНЫЕ ОКНА ==================== -->
@@ -751,6 +966,23 @@
     </div>
   </div>
 
+  <!-- Модальное окно Промокодов -->
+  <div class="modal-overlay" id="promo-modal">
+    <div class="modal-box promo-modal-box">
+      <div class="modal-header-with-badge">
+        <h3>🎟️ Промокоды Stars ⭐</h3>
+        <span class="admin-badge gold-badge">Бонус</span>
+      </div>
+      <p class="modal-desc">Введите промокод для мгновенного зачисления Telegram Stars на ваш баланс:</p>
+      <div class="promo-input-card">
+        <input type="text" id="promo-input-code" placeholder="НАПРИМЕР: START100" maxlength="32" autocomplete="off" spellcheck="false">
+        <button class="promo-submit-btn" id="promo-submit-btn" type="button">АКТИВИРОВАТЬ</button>
+      </div>
+      <div class="promo-status-msg" id="promo-status-msg" style="display: none;"></div>
+      <button class="close-modal-btn" id="close-promo-btn">Закрыть</button>
+    </div>
+  </div>
+
   <!-- Модальное окно Админ-панели -->
   <div class="modal-overlay" id="admin-modal">
     <div class="modal-box admin-modal-box">
@@ -785,6 +1017,14 @@
           <span class="stat-label">Башня ставки</span>
           <span class="stat-val" id="adm-tower-bets-cnt">0 ⭐</span>
         </div>
+        <div class="admin-stat-card">
+          <span class="stat-label">Монетка ставки</span>
+          <span class="stat-val" id="adm-coinflip-bets-cnt">0 ⭐</span>
+        </div>
+        <div class="admin-stat-card">
+          <span class="stat-label">Плинко ставки</span>
+          <span class="stat-val" id="adm-plinko-bets-cnt">0 ⭐</span>
+        </div>
       </div>
 
       <!-- Навигация по вкладкам Админ-панели -->
@@ -795,6 +1035,9 @@
         <button class="adm-tab-pill" data-tab="adm-tab-mines">💣 Минёр</button>
         <button class="adm-tab-pill" data-tab="adm-tab-upgrade">⚡ Upgrade</button>
         <button class="adm-tab-pill" data-tab="adm-tab-tower">🏰 Башня</button>
+        <button class="adm-tab-pill" data-tab="adm-tab-coinflip">🪙 Монетка</button>
+        <button class="adm-tab-pill" data-tab="adm-tab-plinko">🔴 Плинко</button>
+        <button class="adm-tab-pill" data-tab="adm-tab-promo">🎟️ Промо</button>
         <button class="adm-tab-pill" data-tab="adm-tab-chat">💬 Чат</button>
       </div>
 
@@ -974,7 +1217,79 @@
           </div>
         </div>
 
-        <!-- ВКЛАДКА 7: ОНЛАЙН-ЧАТ -->
+        <!-- ВКЛАДКА 7: МОНЕТКА (COINFLIP) -->
+        <div class="adm-tab-pane" id="adm-tab-coinflip">
+          <div class="admin-section">
+            <label class="admin-sec-title">🪙 Управление Монеткой («Coinflip»)</label>
+            <span class="admin-sec-sub">Принудительный исход следующего броска:</span>
+            <div class="admin-quick-pills">
+              <button class="adm-pill adm-cf-force-btn" data-force="heads">🦅 Орёл</button>
+              <button class="adm-pill adm-cf-force-btn" data-force="tails">👑 Решка</button>
+              <button class="adm-pill adm-cf-force-btn btn-success-pill" data-force="win">💎 Победа</button>
+              <button class="adm-pill adm-cf-force-btn btn-danger-pill" data-force="loss">💀 Слив</button>
+              <button class="adm-pill adm-cf-force-btn" data-force="reset">🎲 Сброс</button>
+            </div>
+            <span class="admin-sec-sub" style="margin-top: 8px;">RTP Монетки:</span>
+            <div class="admin-segmented rtp-segmented-grid">
+              <button class="seg-btn-coinflip active" id="adm-cf-rig-normal" data-mode="normal">96% Честный</button>
+              <button class="seg-btn-coinflip" id="adm-cf-rig-greedy" data-mode="greedy">75% Жадный</button>
+              <button class="seg-btn-coinflip btn-amber-rtp" id="adm-cf-rig-hard_50" data-mode="hard_50">50% Жесткий</button>
+              <button class="seg-btn-coinflip btn-orange-rtp" id="adm-cf-rig-trap_20" data-mode="trap_20">20% Капкан</button>
+              <button class="seg-btn-coinflip btn-super-greedy" id="adm-cf-rig-super_greedy_5" data-mode="super_greedy_5">💀 5% Супер</button>
+              <button class="seg-btn-coinflip btn-boost-rtp" id="adm-cf-rig-boost" data-mode="boost">130% Буст</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ВКЛАДКА 8: ПЛИНКО (PLINKO) -->
+        <div class="adm-tab-pane" id="adm-tab-plinko">
+          <div class="admin-section">
+            <label class="admin-sec-title">🔴 Управление Плинко («Plinko»)</label>
+            <span class="admin-sec-sub">Принудительное падение в корзину:</span>
+            <div class="admin-quick-pills">
+              <button class="adm-pill adm-plinko-force-btn btn-jackpot-pill" data-slot="0">💥 Левый куш (0)</button>
+              <button class="adm-pill adm-plinko-force-btn" data-slot="5">⚖️ Центр (5)</button>
+              <button class="adm-pill adm-plinko-force-btn btn-jackpot-pill" data-slot="10">💥 Правый куш (10)</button>
+              <button class="adm-pill adm-plinko-force-btn" data-slot="-1">🎲 Сброс</button>
+            </div>
+            <span class="admin-sec-sub" style="margin-top: 8px;">RTP Плинко:</span>
+            <div class="admin-segmented rtp-segmented-grid">
+              <button class="seg-btn-plinko active" id="adm-plinko-rig-normal" data-mode="normal">96% Честный</button>
+              <button class="seg-btn-plinko" id="adm-plinko-rig-greedy" data-mode="greedy">75% Жадный</button>
+              <button class="seg-btn-plinko btn-amber-rtp" id="adm-plinko-rig-hard_50" data-mode="hard_50">50% Жесткий</button>
+              <button class="seg-btn-plinko btn-orange-rtp" id="adm-plinko-rig-trap_20" data-mode="trap_20">20% Капкан</button>
+              <button class="seg-btn-plinko btn-super-greedy" id="adm-plinko-rig-super_greedy_5" data-mode="super_greedy_5">💀 5% Супер</button>
+              <button class="seg-btn-plinko btn-boost-rtp" id="adm-plinko-rig-boost" data-mode="boost">130% Буст</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ВКЛАДКА 9: ПРОМОКОДЫ -->
+        <div class="adm-tab-pane" id="adm-tab-promo">
+          <div class="admin-section">
+            <label class="admin-sec-title">🎟️ Создать новый промокод</label>
+            <div class="admin-promo-create-form">
+              <input type="text" id="adm-promo-code-input" placeholder="Код (напр. VIP500)" maxlength="32">
+              <div class="admin-promo-create-row">
+                <input type="number" id="adm-promo-reward-input" placeholder="Награда ⭐" min="1" value="50">
+                <input type="number" id="adm-promo-max-input" placeholder="Макс активаций" min="1" value="100">
+                <button class="adm-action-btn" id="adm-promo-create-btn">+ Создать</button>
+              </div>
+            </div>
+
+            <div class="admin-flex-row" style="margin-top: 14px;">
+              <label class="admin-sec-title">Список активных промокодов</label>
+              <button class="adm-pill" id="adm-promo-refresh-btn">🔄 Обновить</button>
+            </div>
+            <div class="adm-promo-list-wrap">
+              <div class="adm-promo-list" id="adm-promo-list">
+                <div class="adm-empty-list">Загрузка промокодов...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ВКЛАДКА 10: ОНЛАЙН-ЧАТ -->
         <div class="adm-tab-pane" id="adm-tab-chat">
           <div class="admin-section">
             <label class="admin-sec-title">💬 Управление Чатом игроков</label>

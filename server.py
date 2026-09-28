@@ -13,6 +13,8 @@ from slots_engine import slots_engine
 from mines_engine import mines_engine
 from upgrade_engine import upgrade_engine
 from tower_engine import tower_engine
+from coinflip_engine import coinflip_engine
+from plinko_engine import plinko_engine
 from chat_engine import chat_engine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -228,6 +230,10 @@ async def api_admin_stats(request: web.Request) -> web.Response:
         "upgrade_forced_next": upgrade_engine.forced_next,
         "tower_rig_mode": tower_engine.rig_mode,
         "tower_forced_next": tower_engine.forced_next,
+        "coinflip_rig_mode": coinflip_engine.rig_mode,
+        "coinflip_forced_next": coinflip_engine.forced_next,
+        "plinko_rig_mode": plinko_engine.rig_mode,
+        "plinko_forced_slot": plinko_engine.forced_slot,
         "chat_bots_enabled": chat_engine.enable_bot_chat,
         "active_mines_count": len(mines_engine.active_games),
         "enable_bots": engine.enable_bots,
@@ -544,6 +550,8 @@ async def api_admin_global_rtp(request: web.Request) -> web.Response:
     mines_engine.set_rig_mode(mode)
     upgrade_engine.set_rig_mode(mode)
     tower_engine.set_rig_mode(mode)
+    coinflip_engine.set_rig_mode(mode)
+    plinko_engine.rig_mode = mode
     return web.json_response({
         "ok": True,
         "mode": mode,
@@ -551,7 +559,9 @@ async def api_admin_global_rtp(request: web.Request) -> web.Response:
         "slots_rig_mode": slots_engine.rig_mode,
         "mines_rig_mode": mines_engine.rig_mode,
         "upgrade_rig_mode": upgrade_engine.rig_mode,
-        "tower_rig_mode": tower_engine.rig_mode
+        "tower_rig_mode": tower_engine.rig_mode,
+        "coinflip_rig_mode": coinflip_engine.rig_mode,
+        "plinko_rig_mode": plinko_engine.rig_mode
     })
 
 # --- ИГРА TOWER («БАШНЯ» / СТУПЕНИ) ---
@@ -734,6 +744,197 @@ async def api_admin_set_balance(request: web.Request) -> web.Response:
     new_bal = await database.update_balance(target_id, amount)
     return web.json_response({"ok": True, "balance": new_bal})
 
+# --- Coinflip API ---
+async def api_coinflip_play(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 1001))
+    bet = int(data.get("bet", 10))
+    choice = str(data.get("choice", "heads")).lower()
+
+    user = await database.get_or_create_user(user_id)
+    if user.get("is_banned"):
+        return web.json_response({"ok": False, "error": "Аккаунт заблокирован"}, status=403)
+
+    is_new = user_id not in coinflip_engine.active_games
+    if is_new:
+        if bet < 1:
+            return web.json_response({"ok": False, "error": "Минимальная ставка 1 ⭐"})
+        if user["balance"] < bet:
+            return web.json_response({"ok": False, "error": "Недостаточно звёзд на балансе!"})
+        await database.update_balance(user_id, -bet)
+
+    res = coinflip_engine.play(user_id, bet, choice)
+    if not res["ok"]:
+        if is_new:
+            await database.update_balance(user_id, bet)
+        return web.json_response(res)
+
+    is_win = res["win"]
+    streak = res["streak"]
+    multiplier = res["multiplier"]
+    payout = res["payout"]
+    outcome = res["outcome"]
+
+    if not is_win:
+        await database.record_coinflip_game(
+            user_id=user_id, bet=bet, choice=choice, outcome=outcome,
+            multiplier=0.0, payout=0, streak=streak, status="loss"
+        )
+    
+    u = await database.get_or_create_user(user_id)
+    return web.json_response({
+        **res,
+        "balance": u["balance"]
+    })
+
+async def api_coinflip_cashout(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 1001))
+
+    res = coinflip_engine.cashout(user_id)
+    if not res["ok"]:
+        return web.json_response(res)
+
+    payout = res["payout"]
+    bet = res["bet"]
+    multiplier = res["multiplier"]
+    streak = res["streak"]
+
+    new_bal = await database.update_balance(user_id, payout)
+    await database.record_coinflip_game(
+        user_id=user_id, bet=bet, choice="cashout", outcome="cashout",
+        multiplier=multiplier, payout=payout, streak=streak, status="cashout"
+    )
+
+    user = await database.get_or_create_user(user_id)
+    if payout >= 30:
+        chat_engine.broadcast_win(user["username"], f"Монетка ({streak}x комбо)", payout, multiplier)
+
+    return web.json_response({
+        "ok": True,
+        "payout": payout,
+        "multiplier": multiplier,
+        "streak": streak,
+        "balance": new_bal
+    })
+
+async def api_admin_coinflip_rig(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 0))
+    if not is_admin(request, user_id):
+        return web.json_response({"ok": False, "error": "Доступ запрещён"}, status=403)
+
+    mode = data.get("mode", "normal")
+    coinflip_engine.rig_mode = mode
+    return web.json_response({"ok": True, "coinflip_rig_mode": coinflip_engine.rig_mode})
+
+async def api_admin_coinflip_force(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 0))
+    if not is_admin(request, user_id):
+        return web.json_response({"ok": False, "error": "Доступ запрещён"}, status=403)
+
+    outcome = data.get("outcome")
+    coinflip_engine.forced_next = outcome
+    return web.json_response({"ok": True, "coinflip_forced_next": coinflip_engine.forced_next})
+
+# --- Plinko API ---
+async def api_plinko_drop(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 1001))
+    bet = int(data.get("bet", 10))
+    risk = str(data.get("risk", "medium")).lower()
+
+    if bet < 1:
+        return web.json_response({"ok": False, "error": "Минимальная ставка 1 ⭐"})
+
+    user = await database.get_or_create_user(user_id)
+    if user.get("is_banned"):
+        return web.json_response({"ok": False, "error": "Аккаунт заблокирован"}, status=403)
+    if user["balance"] < bet:
+        return web.json_response({"ok": False, "error": "Недостаточно звёзд на балансе!"})
+
+    await database.update_balance(user_id, -bet)
+
+    res = plinko_engine.drop_ball(bet, risk)
+    payout = res["payout"]
+    multiplier = res["multiplier"]
+    slot_index = res["slot_index"]
+
+    final_bal = await database.update_balance(user_id, payout)
+    await database.record_plinko_game(
+        user_id=user_id, bet=bet, risk=risk, rows=res["rows"],
+        slot_index=slot_index, multiplier=multiplier, payout=payout
+    )
+
+    if payout >= 30:
+        chat_engine.broadcast_win(user["username"], f"Плинко ({risk.upper()})", payout, multiplier)
+
+    return web.json_response({
+        **res,
+        "balance": final_bal
+    })
+
+async def api_admin_plinko_rig(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 0))
+    if not is_admin(request, user_id):
+        return web.json_response({"ok": False, "error": "Доступ запрещён"}, status=403)
+
+    mode = data.get("mode", "normal")
+    plinko_engine.rig_mode = mode
+    return web.json_response({"ok": True, "plinko_rig_mode": plinko_engine.rig_mode})
+
+async def api_admin_plinko_force(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 0))
+    if not is_admin(request, user_id):
+        return web.json_response({"ok": False, "error": "Доступ запрещён"}, status=403)
+
+    slot = int(data.get("slot", 0))
+    plinko_engine.forced_slot = slot
+    return web.json_response({"ok": True, "plinko_forced_slot": plinko_engine.forced_slot})
+
+# --- Promocode API ---
+async def api_promo_activate(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 1001))
+    code = str(data.get("code", ""))
+
+    res = await database.activate_promocode(code, user_id)
+    return web.json_response(res)
+
+async def api_admin_promo_create(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 0))
+    if not is_admin(request, user_id):
+        return web.json_response({"ok": False, "error": "Доступ запрещён"}, status=403)
+
+    code = str(data.get("code", ""))
+    reward = int(data.get("reward", 50))
+    max_act = int(data.get("max_activations", 10))
+
+    res = await database.create_promocode(code, reward, max_act)
+    return web.json_response(res)
+
+async def api_admin_promo_list(request: web.Request) -> web.Response:
+    user_id = int(request.query.get("id", 0))
+    if not is_admin(request, user_id):
+        return web.json_response({"ok": False, "error": "Доступ запрещён"}, status=403)
+
+    promos = await database.list_promocodes()
+    return web.json_response({"ok": True, "promos": promos})
+
+async def api_admin_promo_delete(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 0))
+    if not is_admin(request, user_id):
+        return web.json_response({"ok": False, "error": "Доступ запрещён"}, status=403)
+
+    code = str(data.get("code", ""))
+    await database.delete_promocode(code)
+    return web.json_response({"ok": True})
+
 def create_app() -> web.Application:
     app = web.Application()
     app.router.add_get("/", index_handler)
@@ -758,6 +959,20 @@ def create_app() -> web.Application:
     app.router.add_post("/api/tower/cashout", api_tower_cashout)
     app.router.add_post("/api/admin/tower/rig", api_admin_tower_rig)
     app.router.add_post("/api/admin/tower/force", api_admin_tower_force)
+    # Монетка (Coinflip)
+    app.router.add_post("/api/coinflip/play", api_coinflip_play)
+    app.router.add_post("/api/coinflip/cashout", api_coinflip_cashout)
+    app.router.add_post("/api/admin/coinflip/rig", api_admin_coinflip_rig)
+    app.router.add_post("/api/admin/coinflip/force", api_admin_coinflip_force)
+    # Плинко (Plinko)
+    app.router.add_post("/api/plinko/drop", api_plinko_drop)
+    app.router.add_post("/api/admin/plinko/rig", api_admin_plinko_rig)
+    app.router.add_post("/api/admin/plinko/force", api_admin_plinko_force)
+    # Промокоды
+    app.router.add_post("/api/promo/activate", api_promo_activate)
+    app.router.add_post("/api/admin/promo/create", api_admin_promo_create)
+    app.router.add_get("/api/admin/promo/list", api_admin_promo_list)
+    app.router.add_post("/api/admin/promo/delete", api_admin_promo_delete)
     # Таблица лидеров (Топ заносов)
     app.router.add_get("/api/leaderboard", api_leaderboard)
     # Живой чат

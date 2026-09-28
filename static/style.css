@@ -3241,4 +3241,584 @@ body {
   opacity: 0.85;
 }
 
+/* ==================== 🪙 МОНЕТКА (COINFLIP) ==================== */
+.coinflip-card {
+  border-color: rgba(255, 209, 102, 0.25);
+}
+.coinflip-card:hover {
+  border-color: rgba(255, 209, 102, 0.5);
+  box-shadow: 0 8px 30px rgba(255, 209, 102, 0.15);
+}
+.btn-coinflip {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #000;
+}
+.yellow-badge {
+  background: rgba(255, 209, 102, 0.15);
+  color: #ffd166;
+  border: 1px solid rgba(255, 209, 102, 0.3);
+}
+.yellow-tag {
+  background: rgba(255, 209, 102, 0.1);
+  color: #ffd166;
+}
+
+.coinflip-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-card);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+.coinflip-status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(255, 209, 102, 0.15);
+  color: #ffd166;
+  border: 1px solid rgba(255, 209, 102, 0.3);
+}
+
+.coinflip-arena-card {
+  background: radial-gradient(circle at center, #1e2235 0%, #0e1018 100%);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4);
+}
+
+.coinflip-series-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  max-width: 100%;
+  padding: 4px;
+  scrollbar-width: none;
+}
+.coinflip-series-bar::-webkit-scrollbar {
+  display: none;
+}
+.series-step {
+  font-size: 11px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-dim);
+  white-space: nowrap;
+  transition: all 0.25s;
+}
+.series-step.active {
+  background: rgba(255, 209, 102, 0.2);
+  border-color: #ffd166;
+  color: #ffd166;
+  box-shadow: 0 0 10px rgba(255, 209, 102, 0.4);
+  transform: scale(1.05);
+}
+.series-arrow {
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 10px;
+}
+
+.coin-container {
+  perspective: 1000px;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 10px 0;
+}
+.coin-3d {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 2.2s cubic-bezier(0.18, 0.89, 0.32, 1.25);
+  cursor: pointer;
+}
+.coin-side {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 30px rgba(245, 158, 11, 0.45), inset 0 0 15px rgba(255, 255, 255, 0.45);
+  border: 4px solid #f59e0b;
+}
+.coin-front {
+  background: radial-gradient(circle, #fde68a 0%, #f59e0b 65%, #92400e 100%);
+  color: #111;
+}
+.coin-back {
+  background: radial-gradient(circle, #fef3c7 0%, #d97706 65%, #78350f 100%);
+  color: #111;
+  transform: rotateY(180deg);
+}
+.coin-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+.coin-symbol {
+  font-size: 44px;
+  line-height: 1;
+}
+.coin-label {
+  font-size: 12px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+.coinflip-info-row {
+  display: flex;
+  width: 100%;
+  justify-content: space-around;
+  gap: 8px;
+}
+.cf-info-box {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 8px 12px;
+  flex: 1;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cf-info-title {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+.cf-info-val {
+  font-size: 15px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: #fff;
+}
+.cf-info-val.gold-val {
+  color: #ffd166;
+}
+.cf-info-val.green-val {
+  color: #00e676;
+}
+
+.coinflip-control-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.coinflip-bet-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.coinflip-choice-row {
+  display: flex;
+  gap: 10px;
+}
+.cf-choice-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #fff;
+}
+.cf-choice-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+.cf-choice-btn.active {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: #f59e0b;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.35);
+  color: #ffd166;
+}
+.cf-c-icon {
+  font-size: 22px;
+}
+.cf-c-name {
+  font-size: 14px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+}
+
+.coinflip-action-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.coinflip-flip-btn {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: none;
+  padding: 13px 16px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #000;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.coinflip-flip-btn:hover {
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.55);
+  transform: translateY(-1px);
+}
+.cf-btn-primary {
+  font-size: 15px;
+  font-weight: 900;
+}
+.cf-btn-sub {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+.coinflip-cashout-btn {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: none;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+  cursor: pointer;
+  animation: pulseGreen 1.5s infinite;
+  transition: all 0.2s;
+}
+.coinflip-cashout-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* ==================== 🔴 ПЛИНКО (PLINKO) ==================== */
+.plinko-card {
+  border-color: rgba(239, 68, 68, 0.25);
+}
+.plinko-card:hover {
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 0 8px 30px rgba(239, 68, 68, 0.15);
+}
+.btn-plinko {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #fff;
+}
+.red-badge {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ff6b6b;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.red-tag {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ff6b6b;
+}
+
+.plinko-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-card);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+.plinko-status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #ff6b6b;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.plinko-arena-card {
+  background: #0d0f18;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6);
+}
+#plinko-canvas {
+  width: 100%;
+  max-width: 380px;
+  height: auto;
+  border-radius: 10px;
+  display: block;
+}
+
+.plinko-control-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.plinko-bet-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.plinko-risk-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.plinko-risk-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+.plinko-max-preview {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.plinko-max-preview b {
+  color: #ff6b6b;
+}
+.plinko-risk-chips {
+  display: flex;
+  gap: 6px;
+}
+.p-risk-chip {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-dim);
+  border-radius: 8px;
+  padding: 8px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+.p-risk-chip:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+}
+.p-risk-chip.active {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #ff6b6b;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.35);
+}
+
+.plinko-drop-btn {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: none;
+  padding: 13px 16px;
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.plinko-drop-btn:hover {
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.55);
+  transform: translateY(-1px);
+}
+.plinko-btn-primary {
+  font-size: 15px;
+  font-weight: 900;
+}
+.plinko-btn-sub {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+/* ==================== 🎟️ ПРОМОКОДЫ МОДАЛКА ==================== */
+.promo-modal-box {
+  max-width: 380px;
+}
+.promo-input-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0;
+}
+.promo-input-card input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 209, 102, 0.3);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  color: #ffd166;
+  font-size: 16px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  letter-spacing: 2px;
+  text-align: center;
+  text-transform: uppercase;
+}
+.promo-input-card input:focus {
+  border-color: #ffd166;
+  outline: none;
+  box-shadow: 0 0 12px rgba(255, 209, 102, 0.3);
+}
+.promo-submit-btn {
+  background: linear-gradient(135deg, #ffd166, #f59e0b);
+  color: #000;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.35);
+}
+.promo-submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+}
+.promo-status-msg {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 10px;
+}
+.promo-status-msg.success {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid #10b981;
+  color: #34d399;
+}
+.promo-status-msg.error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #f87171;
+}
+
+/* ==================== АДМИНКА: ПРОМОКОДЫ И СЕГМЕНТЫ ==================== */
+.admin-promo-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.admin-promo-create-form input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  color: #fff;
+  font-size: 13px;
+}
+.admin-promo-create-row {
+  display: flex;
+  gap: 6px;
+}
+.admin-promo-create-row input {
+  flex: 1;
+}
+.adm-promo-list-wrap {
+  margin-top: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.adm-promo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.adm-promo-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.adm-promo-code {
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: #ffd166;
+}
+.adm-promo-meta {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.adm-promo-del-btn {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.adm-promo-del-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+.seg-btn-coinflip, .seg-btn-plinko {
+  padding: 6px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+.seg-btn-coinflip.active {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+  color: #ffd166;
+}
+.seg-btn-plinko.active {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #ff6b6b;
+}
+
 

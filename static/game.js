@@ -133,6 +133,30 @@ function playSound(type) {
         osc.start(now + i * 0.09);
         osc.stop(now + i * 0.09 + 0.5);
       });
+    } else if (type === "coin_flip") {
+      for (let i = 0; i < 6; i++) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(1100 + i * 140, now + i * 0.04);
+        gain.gain.setValueAtTime(0.07, now + i * 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.04 + 0.03);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + i * 0.04);
+        osc.stop(now + i * 0.04 + 0.03);
+      }
+    } else if (type === "plinko_peg") {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(900 + Math.random() * 350, now);
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.04);
     }
   } catch (e) {
     console.error("Audio error:", e);
@@ -171,6 +195,7 @@ const elToast = document.getElementById("toast");
 const elTopupModal = document.getElementById("topup-modal");
 const elWithdrawModal = document.getElementById("withdraw-modal");
 const elPaytableModal = document.getElementById("paytable-modal");
+const elPromoModal = document.getElementById("promo-modal");
 
 document.getElementById("open-topup-btn").onclick = () => elTopupModal.style.display = "flex";
 document.getElementById("close-topup-btn").onclick = () => elTopupModal.style.display = "none";
@@ -184,13 +209,36 @@ if (document.getElementById("close-paytable-btn")) {
   document.getElementById("close-paytable-btn").onclick = () => elPaytableModal.style.display = "none";
 }
 
-// --- НАВИГАЦИЯ МЕЖДУ ИГРАМИ (ЛОББИ / КРАШ / СЛОТЫ / МИНЁР / UPGRADE / БАШНЯ) ---
+// Промокоды модалка
+if (document.getElementById("open-promo-btn")) {
+  document.getElementById("open-promo-btn").onclick = () => {
+    if (elPromoModal) {
+      elPromoModal.style.display = "flex";
+      const statusEl = document.getElementById("promo-status-msg");
+      if (statusEl) statusEl.style.display = "none";
+      const inp = document.getElementById("promo-input-code");
+      if (inp) {
+        inp.value = "";
+        inp.focus();
+      }
+    }
+  };
+}
+if (document.getElementById("close-promo-btn")) {
+  document.getElementById("close-promo-btn").onclick = () => {
+    if (elPromoModal) elPromoModal.style.display = "none";
+  };
+}
+
+// --- НАВИГАЦИЯ МЕЖДУ ИГРАМИ (ЛОББИ / КРАШ / СЛОТЫ / МИНЁР / UPGRADE / БАШНЯ / МОНЕТКА / ПЛИНКО) ---
 const elViewLobby = document.getElementById("view-lobby");
 const elViewCrash = document.getElementById("view-crash");
 const elViewSlots = document.getElementById("view-slots");
 const elViewMines = document.getElementById("view-mines");
 const elViewUpgrade = document.getElementById("view-upgrade");
 const elViewTower = document.getElementById("view-tower");
+const elViewCoinflip = document.getElementById("view-coinflip");
+const elViewPlinko = document.getElementById("view-plinko");
 const elBackLobbyBtn = document.getElementById("back-lobby-btn");
 
 function switchView(viewName) {
@@ -200,6 +248,8 @@ function switchView(viewName) {
   if (elViewMines) elViewMines.style.display = viewName === "mines" ? "flex" : "none";
   if (elViewUpgrade) elViewUpgrade.style.display = viewName === "upgrade" ? "flex" : "none";
   if (elViewTower) elViewTower.style.display = viewName === "tower" ? "flex" : "none";
+  if (elViewCoinflip) elViewCoinflip.style.display = viewName === "coinflip" ? "flex" : "none";
+  if (elViewPlinko) elViewPlinko.style.display = viewName === "plinko" ? "flex" : "none";
 
   if (viewName === "lobby") {
     if (elBackLobbyBtn) elBackLobbyBtn.style.display = "none";
@@ -215,6 +265,10 @@ function switchView(viewName) {
       initUpgradeWheel();
     } else if (viewName === "tower") {
       initTowerUI();
+    } else if (viewName === "coinflip") {
+      initCoinflipUI();
+    } else if (viewName === "plinko") {
+      initPlinkoUI();
     }
   }
 }
@@ -233,6 +287,12 @@ if (document.getElementById("card-play-upgrade")) {
 }
 if (document.getElementById("card-play-tower")) {
   document.getElementById("card-play-tower").onclick = () => switchView("tower");
+}
+if (document.getElementById("card-play-coinflip")) {
+  document.getElementById("card-play-coinflip").onclick = () => switchView("coinflip");
+}
+if (document.getElementById("card-play-plinko")) {
+  document.getElementById("card-play-plinko").onclick = () => switchView("plinko");
 }
 if (elBackLobbyBtn) {
   elBackLobbyBtn.onclick = () => switchView("lobby");
@@ -287,6 +347,9 @@ document.querySelectorAll(".adm-tab-pill").forEach(pill => {
     document.querySelectorAll(".adm-tab-pane").forEach(pane => {
       pane.classList.toggle("active", pane.id === targetTab);
     });
+    if (targetTab === "adm-tab-promo" && typeof refreshAdminPromos === "function") {
+      refreshAdminPromos();
+    }
   };
 });
 
@@ -306,6 +369,10 @@ async function refreshAdminStats() {
       if (minesBetsEl) minesBetsEl.textContent = `${res.mines_bets || 0} ⭐`;
       const towerBetsEl = document.getElementById("adm-tower-bets-cnt");
       if (towerBetsEl) towerBetsEl.textContent = `${res.tower_bets || 0} ⭐`;
+      const coinflipBetsEl = document.getElementById("adm-coinflip-bets-cnt");
+      if (coinflipBetsEl) coinflipBetsEl.textContent = `${res.coinflip_bets || 0} ⭐`;
+      const plinkoBetsEl = document.getElementById("adm-plinko-bets-cnt");
+      if (plinkoBetsEl) plinkoBetsEl.textContent = `${res.plinko_bets || 0} ⭐`;
 
       // Режим RTP Crash
       document.querySelectorAll(".seg-btn").forEach(btn => {
@@ -332,11 +399,23 @@ async function refreshAdminStats() {
         btn.classList.toggle("active", btn.dataset.mode === (res.tower_rig_mode || "normal"));
       });
 
-      // Мастер-RTP (если все 5 игр совпадают)
+      // Режим RTP Coinflip
+      document.querySelectorAll(".seg-btn-coinflip").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.mode === (res.coinflip_rig_mode || "normal"));
+      });
+
+      // Режим RTP Plinko
+      document.querySelectorAll(".seg-btn-plinko").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.mode === (res.plinko_rig_mode || "normal"));
+      });
+
+      // Мастер-RTP (если все игры совпадают)
       const masterTag = document.getElementById("adm-master-rtp-tag");
       const upMode = res.upgrade_rig_mode || res.rig_mode;
       const towerMode = res.tower_rig_mode || res.rig_mode;
-      if (res.rig_mode === res.slots_rig_mode && res.rig_mode === res.mines_rig_mode && res.rig_mode === upMode && res.rig_mode === towerMode) {
+      const cfMode = res.coinflip_rig_mode || res.rig_mode;
+      const plMode = res.plinko_rig_mode || res.rig_mode;
+      if (res.rig_mode === res.slots_rig_mode && res.rig_mode === res.mines_rig_mode && res.rig_mode === upMode && res.rig_mode === towerMode && res.rig_mode === cfMode && res.rig_mode === plMode) {
         document.querySelectorAll(".seg-btn-global").forEach(btn => {
           btn.classList.toggle("active", btn.dataset.mode === res.rig_mode);
         });
@@ -544,9 +623,11 @@ document.querySelectorAll(".seg-btn-global").forEach(btn => {
       document.querySelectorAll(".seg-btn-mines").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
       document.querySelectorAll(".seg-btn-upgrade").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
       document.querySelectorAll(".seg-btn-tower").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+      document.querySelectorAll(".seg-btn-coinflip").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+      document.querySelectorAll(".seg-btn-plinko").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
       const masterTag = document.getElementById("adm-master-rtp-tag");
       if (masterTag) masterTag.textContent = RTP_LABELS[mode] || mode;
-      showToast(`⚡ RTP всех 5 игр: ${RTP_LABELS[mode] || mode}`);
+      showToast(`⚡ RTP всех игр казино: ${RTP_LABELS[mode] || mode}`);
       triggerHaptic("medium");
     }
   };
@@ -700,6 +781,176 @@ document.querySelectorAll(".adm-tower-force-btn").forEach(btn => {
     }
   };
 });
+
+// Админ: Режим RTP Монетки (Coinflip)
+document.querySelectorAll(".seg-btn-coinflip").forEach(btn => {
+  btn.onclick = async () => {
+    const mode = btn.dataset.mode;
+    const res = await fetch("/api/admin/coinflip/rig", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: userId, mode: mode })
+    }).then(r => r.json());
+    if (res.ok) {
+      document.querySelectorAll(".seg-btn-coinflip").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      showToast(`🪙 RTP монетки: ${RTP_LABELS[mode] || mode}`);
+    }
+  };
+});
+
+// Админ: Принудительный исход Монетки (Heads / Tails / Win / Loss / Reset)
+document.querySelectorAll(".adm-cf-force-btn").forEach(btn => {
+  btn.onclick = async () => {
+    const forceType = btn.dataset.force;
+    const res = await fetch("/api/admin/coinflip/force", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: userId, force: forceType })
+    }).then(r => r.json());
+    if (res.ok) {
+      const labels = {
+        heads: "🦅 След. бросок: 100% ОРЁЛ!",
+        tails: "👑 След. бросок: 100% РЕШКА!",
+        win: "💎 След. бросок: 100% ПОБЕДА игрока!",
+        loss: "💀 След. бросок: 100% СЛИВ игрока!",
+        reset: "🎲 Принудительный исход монетки сброшен"
+      };
+      showToast(labels[forceType] || "Обновлено");
+    }
+  };
+});
+
+// Админ: Режим RTP Плинко (Plinko)
+document.querySelectorAll(".seg-btn-plinko").forEach(btn => {
+  btn.onclick = async () => {
+    const mode = btn.dataset.mode;
+    const res = await fetch("/api/admin/plinko/rig", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: userId, mode: mode })
+    }).then(r => r.json());
+    if (res.ok) {
+      document.querySelectorAll(".seg-btn-plinko").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      showToast(`🔴 RTP плинко: ${RTP_LABELS[mode] || mode}`);
+    }
+  };
+});
+
+// Админ: Принудительный слот Плинко (0 / 5 / 10 / -1)
+document.querySelectorAll(".adm-plinko-force-btn").forEach(btn => {
+  btn.onclick = async () => {
+    const slot = parseInt(btn.dataset.slot, 10);
+    const res = await fetch("/api/admin/plinko/force", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: userId, slot: slot })
+    }).then(r => r.json());
+    if (res.ok) {
+      if (slot >= 0) {
+        showToast(`💥 След. шарик Плинко упадет в слот ${slot}!`);
+      } else {
+        showToast("🎲 Принудительный слот Плинко сброшен");
+      }
+    }
+  };
+});
+
+// Админ: Управление промокодами
+async function refreshAdminPromos() {
+  const listEl = document.getElementById("adm-promo-list");
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="adm-empty-list">Загрузка промокодов...</div>';
+
+  try {
+    const res = await fetch(`/api/admin/promo/list?id=${userId}`).then(r => r.json());
+    if (res.ok && res.promos) {
+      if (res.promos.length === 0) {
+        listEl.innerHTML = '<div class="adm-empty-list">Нет активных промокодов</div>';
+        return;
+      }
+      listEl.innerHTML = "";
+      res.promos.forEach(p => {
+        const item = document.createElement("div");
+        item.className = "adm-promo-item";
+        item.innerHTML = `
+          <div>
+            <span class="adm-promo-code">${escapeHtml(p.code)}</span>
+            <span class="adm-promo-meta"> • +${p.reward} ⭐ (${p.activations_count || 0}/${p.max_activations})</span>
+          </div>
+          <button class="adm-promo-del-btn" data-code="${escapeHtml(p.code)}">✕ Удалить</button>
+        `;
+        item.querySelector(".adm-promo-del-btn").onclick = async () => {
+          await deleteAdminPromo(p.code);
+        };
+        listEl.appendChild(item);
+      });
+    }
+  } catch (e) {
+    listEl.innerHTML = '<div class="adm-empty-list">Ошибка загрузки</div>';
+  }
+}
+
+async function deleteAdminPromo(code) {
+  try {
+    const res = await fetch("/api/admin/promo/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: userId, code: code })
+    }).then(r => r.json());
+    if (res.ok) {
+      showToast(`Промокод ${code} удалён`);
+      refreshAdminPromos();
+    }
+  } catch (e) {
+    showToast("Ошибка удаления: " + e.message);
+  }
+}
+
+if (document.getElementById("adm-promo-create-btn")) {
+  document.getElementById("adm-promo-create-btn").onclick = async () => {
+    const codeInp = document.getElementById("adm-promo-code-input");
+    const rewInp = document.getElementById("adm-promo-reward-input");
+    const maxInp = document.getElementById("adm-promo-max-input");
+
+    const code = codeInp?.value.trim().toUpperCase();
+    const reward = parseInt(rewInp?.value, 10) || 50;
+    const maxAct = parseInt(maxInp?.value, 10) || 100;
+
+    if (!code) {
+      showToast("Введите код промокода");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/promo/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: userId,
+          code: code,
+          reward: reward,
+          max_activations: maxAct
+        })
+      }).then(r => r.json());
+
+      if (res.ok) {
+        showToast(`🎟️ Промокод ${code} (+${reward} ⭐) создан!`);
+        if (codeInp) codeInp.value = "";
+        refreshAdminPromos();
+      } else {
+        showToast(res.error || "Ошибка создания промокода");
+      }
+    } catch (e) {
+      showToast("Ошибка: " + e.message);
+    }
+  };
+}
+
+if (document.getElementById("adm-promo-refresh-btn")) {
+  document.getElementById("adm-promo-refresh-btn").onclick = refreshAdminPromos;
+}
 
 // Тумблер ботов в Crash
 document.getElementById("adm-toggle-bots-btn").onclick = async () => {
@@ -2701,6 +2952,682 @@ document.querySelectorAll(".t-diff-chip").forEach(chip => {
   };
 });
 
+// ==================== 🎟️ ПРОМОКОДЫ: АКТИВАЦИЯ ====================
+const elPromoSubmitBtn = document.getElementById("promo-submit-btn");
+const elPromoInputCode = document.getElementById("promo-input-code");
+const elPromoStatusMsg = document.getElementById("promo-status-msg");
+
+async function activatePromoCode() {
+  if (!elPromoInputCode) return;
+  const code = elPromoInputCode.value.trim().toUpperCase();
+  if (!code) {
+    showPromoStatus("Введите промокод!", "error");
+    return;
+  }
+
+  if (elPromoSubmitBtn) elPromoSubmitBtn.disabled = true;
+
+  try {
+    const res = await fetch("/api/promo/activate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: userId, code: code })
+    }).then(r => r.json());
+
+    if (elPromoSubmitBtn) elPromoSubmitBtn.disabled = false;
+
+    if (res.ok) {
+      userBalance = res.balance;
+      elUserBalance.textContent = userBalance;
+      playSound("jackpot");
+      triggerHaptic("success");
+      showPromoStatus(`🎉 Успешно! Вам начислено +${res.reward} ⭐ на баланс!`, "success");
+      showToast(`🎟️ Промокод активирован: +${res.reward} ⭐!`);
+      elPromoInputCode.value = "";
+    } else {
+      playSound("crash");
+      triggerHaptic("error");
+      showPromoStatus(res.error || "Неверный промокод", "error");
+    }
+  } catch (e) {
+    if (elPromoSubmitBtn) elPromoSubmitBtn.disabled = false;
+    showPromoStatus("Ошибка сети: " + e.message, "error");
+  }
+}
+
+function showPromoStatus(msg, type) {
+  if (!elPromoStatusMsg) return;
+  elPromoStatusMsg.textContent = msg;
+  elPromoStatusMsg.className = `promo-status-msg ${type}`;
+  elPromoStatusMsg.style.display = "block";
+}
+
+if (elPromoSubmitBtn) {
+  elPromoSubmitBtn.onclick = activatePromoCode;
+}
+if (elPromoInputCode) {
+  elPromoInputCode.onkeydown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      activatePromoCode();
+    }
+  };
+}
+
+// ==================== 🪙 ИГРА 6: МОНЕТКА (COINFLIP) ====================
+let coinflipBet = 10;
+let coinflipChoice = "heads"; // "heads" | "tails"
+let coinflipStreak = 0;
+let coinflipCurrentPot = 0;
+let coinflipFlipping = false;
+let coinflipTotalRotation = 0;
+
+const elCoin3d = document.getElementById("coin-3d");
+const elCoinflipBetAmount = document.getElementById("coinflip-bet-amount");
+const elCoinflipStreakVal = document.getElementById("coinflip-streak-val");
+const elCoinflipMultVal = document.getElementById("coinflip-mult-val");
+const elCoinflipPotVal = document.getElementById("coinflip-pot-val");
+const elCoinflipStatusBadge = document.getElementById("coinflip-status-badge");
+const elCoinflipFlipBtn = document.getElementById("coinflip-flip-btn");
+const elCoinflipCashoutBtn = document.getElementById("coinflip-cashout-btn");
+const elCfBtnPrimary = document.getElementById("cf-btn-primary");
+const elCfBtnSub = document.getElementById("cf-btn-sub");
+const elCfCashoutVal = document.getElementById("cf-cashout-val");
+
+function updateCoinflipUI() {
+  const mult = coinflipStreak === 0 ? 1.0 : Math.round(Math.pow(1.95, coinflipStreak) * 100) / 100;
+  const nextMult = Math.round(Math.pow(1.95, coinflipStreak + 1) * 100) / 100;
+  const nextWin = Math.floor(coinflipBet * nextMult);
+
+  if (elCoinflipStreakVal) elCoinflipStreakVal.textContent = coinflipStreak;
+  if (elCoinflipMultVal) elCoinflipMultVal.textContent = `${mult.toFixed(2)}x`;
+  if (elCoinflipPotVal) elCoinflipPotVal.textContent = `${coinflipCurrentPot} ⭐`;
+
+  document.querySelectorAll("#coinflip-series-bar .series-step").forEach((step, idx) => {
+    step.classList.toggle("active", idx === Math.min(coinflipStreak, 5));
+  });
+
+  if (coinflipStreak > 0) {
+    if (elCoinflipCashoutBtn) {
+      elCoinflipCashoutBtn.style.display = "block";
+      if (elCfCashoutVal) elCfCashoutVal.textContent = `${coinflipCurrentPot} ⭐`;
+    }
+    if (elCfBtnPrimary) elCfBtnPrimary.textContent = `🪙 СЛЕДУЮЩИЙ БРОСОК (${nextMult.toFixed(2)}x)`;
+    if (elCfBtnSub) elCfBtnSub.textContent = `Куш вырастет до ${nextWin} ⭐`;
+  } else {
+    if (elCoinflipCashoutBtn) elCoinflipCashoutBtn.style.display = "none";
+    if (elCfBtnPrimary) elCfBtnPrimary.textContent = "🪙 БРОСИТЬ МОНЕТУ";
+    if (elCfBtnSub) elCfBtnSub.textContent = `Ставка ${coinflipBet} ⭐ • Победа ${Math.floor(coinflipBet * 1.95)} ⭐`;
+  }
+}
+
+function initCoinflipUI() {
+  if (elCoinflipBetAmount) {
+    let b = parseInt(elCoinflipBetAmount.value, 10);
+    if (!isNaN(b) && b > 0) coinflipBet = b;
+  }
+  updateCoinflipUI();
+}
+
+async function playCoinflip() {
+  if (coinflipFlipping) return;
+
+  const bet = parseInt(elCoinflipBetAmount.value, 10) || 10;
+  if (coinflipStreak === 0) {
+    if (bet < 1) {
+      showToast("Минимальная ставка 1 ⭐");
+      return;
+    }
+    if (userBalance < bet) {
+      showToast("Недостаточно звёзд на балансе!");
+      return;
+    }
+    coinflipBet = bet;
+  }
+
+  coinflipFlipping = true;
+  if (elCoinflipFlipBtn) elCoinflipFlipBtn.disabled = true;
+  if (elCoinflipCashoutBtn) elCoinflipCashoutBtn.disabled = true;
+  if (elCoinflipBetAmount) elCoinflipBetAmount.disabled = true;
+
+  try {
+    const res = await fetch("/api/coinflip/play", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: userId,
+        bet: coinflipBet,
+        choice: coinflipChoice
+      })
+    }).then(r => r.json());
+
+    if (!res.ok) {
+      coinflipFlipping = false;
+      if (elCoinflipFlipBtn) elCoinflipFlipBtn.disabled = false;
+      if (elCoinflipCashoutBtn) elCoinflipCashoutBtn.disabled = false;
+      if (elCoinflipBetAmount) elCoinflipBetAmount.disabled = false;
+      showToast(res.error || "Ошибка игры");
+      return;
+    }
+
+    if (coinflipStreak === 0) {
+      userBalance -= coinflipBet;
+      elUserBalance.textContent = userBalance;
+    }
+
+    playSound("coin_flip");
+    triggerHaptic("impact");
+
+    if (elCoinflipStatusBadge) {
+      elCoinflipStatusBadge.textContent = "Монета в воздухе...";
+    }
+
+    const targetIsHeads = res.outcome === "heads";
+    const baseSpins = 1800;
+    const targetMod = targetIsHeads ? 0 : 180;
+    coinflipTotalRotation += baseSpins + ((targetMod - (coinflipTotalRotation % 360) + 360) % 360);
+    if (elCoin3d) {
+      elCoin3d.style.transform = `rotateY(${coinflipTotalRotation}deg)`;
+    }
+
+    setTimeout(() => {
+      coinflipFlipping = false;
+      if (elCoinflipFlipBtn) elCoinflipFlipBtn.disabled = false;
+      if (elCoinflipCashoutBtn) elCoinflipCashoutBtn.disabled = false;
+
+      if (res.win) {
+        playSound("cashout");
+        triggerHaptic("success");
+        coinflipStreak = res.streak;
+        coinflipCurrentPot = res.payout;
+
+        if (elCoinflipStatusBadge) {
+          elCoinflipStatusBadge.textContent = `Победа! Серия ${coinflipStreak} 🔥 (${res.outcome === "heads" ? "Орёл" : "Решка"})`;
+        }
+        updateCoinflipUI();
+        showToast(`🎉 Победа! Выпал ${res.outcome === "heads" ? "🦅 ОРЁЛ" : "👑 РЕШКА"}! Серия x${res.multiplier.toFixed(2)}`);
+      } else {
+        playSound("crash");
+        triggerHaptic("error");
+        coinflipStreak = 0;
+        coinflipCurrentPot = 0;
+        userBalance = res.balance;
+        elUserBalance.textContent = userBalance;
+
+        if (elCoinflipStatusBadge) {
+          elCoinflipStatusBadge.textContent = `Слив! Выпал ${res.outcome === "heads" ? "Орёл" : "Решка"}`;
+        }
+        if (elCoinflipBetAmount) elCoinflipBetAmount.disabled = false;
+        updateCoinflipUI();
+        showToast(`💀 Слив! Выпал ${res.outcome === "heads" ? "🦅 ОРЁЛ" : "👑 РЕШКА"}.`);
+      }
+    }, 2200);
+
+  } catch (e) {
+    coinflipFlipping = false;
+    if (elCoinflipFlipBtn) elCoinflipFlipBtn.disabled = false;
+    if (elCoinflipCashoutBtn) elCoinflipCashoutBtn.disabled = false;
+    if (elCoinflipBetAmount) elCoinflipBetAmount.disabled = false;
+    showToast("Ошибка сети: " + e.message);
+  }
+}
+
+async function cashoutCoinflip() {
+  if (coinflipFlipping || coinflipStreak === 0) return;
+  if (elCoinflipCashoutBtn) elCoinflipCashoutBtn.disabled = true;
+
+  try {
+    const res = await fetch("/api/coinflip/cashout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: userId })
+    }).then(r => r.json());
+
+    if (!res.ok) {
+      if (elCoinflipCashoutBtn) elCoinflipCashoutBtn.disabled = false;
+      showToast(res.error || "Ошибка кэшаута");
+      return;
+    }
+
+    userBalance = res.balance;
+    elUserBalance.textContent = userBalance;
+    playSound("jackpot");
+    triggerHaptic("success");
+    showToast(`💰 Вы забрали куш +${res.win} ⭐ (${res.multiplier.toFixed(2)}x)!`);
+
+    coinflipStreak = 0;
+    coinflipCurrentPot = 0;
+    if (elCoinflipBetAmount) elCoinflipBetAmount.disabled = false;
+    if (elCoinflipStatusBadge) elCoinflipStatusBadge.textContent = "Куш забран!";
+    updateCoinflipUI();
+
+  } catch (e) {
+    if (elCoinflipCashoutBtn) elCoinflipCashoutBtn.disabled = false;
+    showToast("Ошибка сети: " + e.message);
+  }
+}
+
+if (elCoinflipFlipBtn) elCoinflipFlipBtn.onclick = playCoinflip;
+if (elCoinflipCashoutBtn) elCoinflipCashoutBtn.onclick = cashoutCoinflip;
+
+document.getElementById("cf-choice-heads")?.addEventListener("click", () => {
+  if (coinflipFlipping) return;
+  coinflipChoice = "heads";
+  document.getElementById("cf-choice-heads")?.classList.add("active");
+  document.getElementById("cf-choice-tails")?.classList.remove("active");
+});
+document.getElementById("cf-choice-tails")?.addEventListener("click", () => {
+  if (coinflipFlipping) return;
+  coinflipChoice = "tails";
+  document.getElementById("cf-choice-tails")?.classList.add("active");
+  document.getElementById("cf-choice-heads")?.classList.remove("active");
+});
+
+document.getElementById("coinflip-btn-div2")?.addEventListener("click", () => {
+  if (coinflipStreak > 0) return;
+  let cur = parseInt(elCoinflipBetAmount.value, 10) || 10;
+  elCoinflipBetAmount.value = Math.max(1, Math.floor(cur / 2));
+  coinflipBet = parseInt(elCoinflipBetAmount.value, 10);
+  updateCoinflipUI();
+});
+document.getElementById("coinflip-btn-mul2")?.addEventListener("click", () => {
+  if (coinflipStreak > 0) return;
+  let cur = parseInt(elCoinflipBetAmount.value, 10) || 10;
+  elCoinflipBetAmount.value = Math.min(userBalance, cur * 2);
+  coinflipBet = parseInt(elCoinflipBetAmount.value, 10);
+  updateCoinflipUI();
+});
+document.getElementById("coinflip-btn-max")?.addEventListener("click", () => {
+  if (coinflipStreak > 0) return;
+  elCoinflipBetAmount.value = Math.max(1, userBalance);
+  coinflipBet = parseInt(elCoinflipBetAmount.value, 10);
+  updateCoinflipUI();
+});
+document.querySelectorAll(".coinflip-chip").forEach(chip => {
+  chip.onclick = () => {
+    if (coinflipStreak > 0) return;
+    const amt = parseInt(chip.dataset.amt, 10);
+    elCoinflipBetAmount.value = amt;
+    coinflipBet = amt;
+    updateCoinflipUI();
+  };
+});
+if (elCoinflipBetAmount) {
+  elCoinflipBetAmount.oninput = () => {
+    let b = parseInt(elCoinflipBetAmount.value, 10);
+    if (!isNaN(b) && b > 0) {
+      coinflipBet = b;
+      updateCoinflipUI();
+    }
+  };
+}
+
+// ==================== 🔴 ИГРА 7: ПЛИНКО (PLINKO) ====================
+let plinkoBet = 10;
+let plinkoRisk = "medium";
+let plinkoCanvas = null;
+let plinkoCtx = null;
+let plinkoBalls = [];
+let plinkoSlotHighlights = Array(11).fill(0);
+
+const PLINKO_PAYTABLES = {
+  low:    [8.9, 3.0, 1.4, 1.1, 1.0, 0.5, 1.0, 1.1, 1.4, 3.0, 8.9],
+  medium: [22.0, 5.0, 2.0, 1.4, 0.6, 0.4, 0.6, 1.4, 2.0, 5.0, 22.0],
+  high:   [110.0, 20.0, 4.0, 1.5, 0.3, 0.2, 0.3, 1.5, 4.0, 20.0, 110.0]
+};
+
+const elPlinkoBet = document.getElementById("plinko-bet-amount");
+const elPlinkoRiskLabel = document.getElementById("plinko-risk-label");
+const elPlinkoMaxWinLabel = document.getElementById("plinko-max-win-label");
+const elPlinkoDropBtn = document.getElementById("plinko-drop-btn");
+const elPlinkoStatusBadge = document.getElementById("plinko-status-badge");
+const elPlinkoBtnPrimary = document.getElementById("plinko-btn-primary");
+const elPlinkoBtnSub = document.getElementById("plinko-btn-sub");
+
+function updatePlinkoControls() {
+  const mults = PLINKO_PAYTABLES[plinkoRisk];
+  const maxMult = mults[0];
+  const maxWin = Math.floor(plinkoBet * maxMult);
+
+  const riskTitles = { low: "Низкий", medium: "Средний", high: "Высокий" };
+  if (elPlinkoRiskLabel) elPlinkoRiskLabel.textContent = riskTitles[plinkoRisk];
+  if (elPlinkoMaxWinLabel) elPlinkoMaxWinLabel.textContent = `${maxMult.toFixed(1)}x (${maxWin} ⭐)`;
+  if (elPlinkoBtnSub) elPlinkoBtnSub.textContent = `Ставка ${plinkoBet} ⭐`;
+}
+
+function initPlinkoUI() {
+  plinkoCanvas = document.getElementById("plinko-canvas");
+  if (plinkoCanvas) {
+    plinkoCtx = plinkoCanvas.getContext("2d");
+  }
+  if (elPlinkoBet) {
+    let b = parseInt(elPlinkoBet.value, 10);
+    if (!isNaN(b) && b > 0) plinkoBet = b;
+  }
+  updatePlinkoControls();
+  drawPlinkoBoard();
+}
+
+const PLINKO_ROWS = 10;
+function getPlinkoPegs() {
+  if (!plinkoCanvas) return [];
+  const W = plinkoCanvas.width;
+  const H = plinkoCanvas.height;
+  const startY = 40;
+  const endY = H - 65;
+  const rowSpacing = (endY - startY) / PLINKO_ROWS;
+  const pegs = [];
+
+  for (let r = 0; r <= PLINKO_ROWS; r++) {
+    const pinsInRow = r + 3;
+    const y = startY + r * rowSpacing;
+    const pinSpacing = Math.min(28, (W - 40) / (PLINKO_ROWS + 3));
+    const startX = (W / 2) - ((pinsInRow - 1) * pinSpacing) / 2;
+
+    for (let c = 0; c < pinsInRow; c++) {
+      pegs.push({
+        x: startX + c * pinSpacing,
+        y: y,
+        r: r,
+        c: c
+      });
+    }
+  }
+  return pegs;
+}
+
+function drawPlinkoBoard() {
+  if (!plinkoCanvas || !plinkoCtx) return;
+  const ctx = plinkoCtx;
+  const W = plinkoCanvas.width;
+  const H = plinkoCanvas.height;
+
+  ctx.fillStyle = "#0c0e17";
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 20) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+
+  const pegs = getPlinkoPegs();
+  pegs.forEach(peg => {
+    ctx.beginPath();
+    ctx.arc(peg.x, peg.y, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#cbd5e1";
+    ctx.shadowColor = "rgba(255, 255, 255, 0.35)";
+    ctx.shadowBlur = 4;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+
+  const mults = PLINKO_PAYTABLES[plinkoRisk];
+  const slotCount = 11;
+  const slotWidth = (W - 20) / slotCount;
+  const slotY = H - 42;
+  const slotH = 34;
+
+  for (let i = 0; i < slotCount; i++) {
+    const x = 10 + i * slotWidth;
+    const mult = mults[i];
+    const highlight = plinkoSlotHighlights[i];
+
+    const distFromCenter = Math.abs(i - 5) / 5;
+    let baseColor = "#10b981";
+    if (distFromCenter > 0.7) baseColor = "#ef4444";
+    else if (distFromCenter > 0.4) baseColor = "#f59e0b";
+    else if (distFromCenter > 0.15) baseColor = "#eab308";
+
+    ctx.save();
+    ctx.fillStyle = highlight > 0 ? "#ffffff" : baseColor;
+    if (highlight > 0) {
+      ctx.shadowColor = baseColor;
+      ctx.shadowBlur = 15 * highlight;
+    }
+    ctx.beginPath();
+    ctx.roundRect(x + 1, slotY, slotWidth - 2, slotH, 5);
+    ctx.fill();
+
+    ctx.fillStyle = "#000";
+    ctx.font = "bold 9px 'JetBrains Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const label = mult >= 10 ? `${mult.toFixed(0)}x` : `${mult.toFixed(1)}x`;
+    ctx.fillText(label, x + slotWidth / 2, slotY + slotH / 2);
+    ctx.restore();
+
+    if (plinkoSlotHighlights[i] > 0) {
+      plinkoSlotHighlights[i] = Math.max(0, plinkoSlotHighlights[i] - 0.04);
+    }
+  }
+
+  for (let i = plinkoBalls.length - 1; i >= 0; i--) {
+    const b = plinkoBalls[i];
+    b.update();
+    b.draw(ctx);
+    if (b.done) {
+      plinkoBalls.splice(i, 1);
+    }
+  }
+}
+
+class PlinkoBall {
+  constructor(path, targetSlot, payout, multiplier) {
+    this.path = path;
+    this.targetSlot = targetSlot;
+    this.payout = payout;
+    this.multiplier = multiplier;
+    this.stepIndex = 0;
+    this.stepProgress = 0;
+    this.done = false;
+
+    const W = plinkoCanvas.width;
+    const startY = 40;
+    const endY = plinkoCanvas.height - 65;
+    const rowSpacing = (endY - startY) / PLINKO_ROWS;
+    const pinSpacing = Math.min(28, (W - 40) / (PLINKO_ROWS + 3));
+
+    this.points = [{ x: W / 2, y: 15 }];
+    let col = 1;
+
+    for (let r = 0; r < path.length; r++) {
+      const pinsInRow = r + 3;
+      const startX = (W / 2) - ((pinsInRow - 1) * pinSpacing) / 2;
+      const turn = path[r];
+      if (turn === 1) col++;
+      const pegX = startX + (col - 1) * pinSpacing;
+      const pegY = startY + r * rowSpacing;
+
+      this.points.push({
+        x: pegX + (Math.random() * 2 - 1),
+        y: pegY,
+        isPeg: true
+      });
+    }
+
+    const slotCount = 11;
+    const slotWidth = (W - 20) / slotCount;
+    const finalX = 10 + targetSlot * slotWidth + slotWidth / 2;
+    this.points.push({ x: finalX, y: plinkoCanvas.height - 25, isSlot: true });
+
+    this.x = this.points[0].x;
+    this.y = this.points[0].y;
+  }
+
+  update() {
+    if (this.done) return;
+
+    this.stepProgress += 0.085;
+    if (this.stepProgress >= 1) {
+      this.stepProgress = 0;
+      this.stepIndex++;
+
+      if (this.stepIndex < this.points.length) {
+        const pt = this.points[this.stepIndex];
+        if (pt.isPeg) {
+          playSound("plinko_peg");
+          triggerHaptic("impact");
+        }
+      } else {
+        this.done = true;
+        plinkoSlotHighlights[this.targetSlot] = 1.0;
+
+        if (this.multiplier >= 10) {
+          playSound("jackpot");
+          triggerHaptic("success");
+        } else if (this.multiplier >= 1.5) {
+          playSound("cashout");
+          triggerHaptic("success");
+        }
+
+        if (elPlinkoStatusBadge) {
+          elPlinkoStatusBadge.textContent = `Куш ${this.multiplier.toFixed(1)}x (+${this.payout} ⭐)!`;
+        }
+        showToast(`🔴 Шарик попал в ${this.multiplier.toFixed(1)}x: +${this.payout} ⭐!`);
+        return;
+      }
+    }
+
+    const p0 = this.points[this.stepIndex];
+    const p1 = this.points[Math.min(this.stepIndex + 1, this.points.length - 1)];
+
+    const t = this.stepProgress;
+    this.x = p0.x + (p1.x - p0.x) * t;
+    this.y = p0.y + (p1.y - p0.y) * (t * t);
+  }
+
+  draw(ctx) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, 5.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#ff3366";
+    ctx.shadowColor = "#ff3366";
+    ctx.shadowBlur = 10;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(this.x - 1.5, this.y - 1.5, 2, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+let plinkoAnimId = null;
+function runPlinkoLoop() {
+  drawPlinkoBoard();
+  if (plinkoBalls.length > 0 || plinkoSlotHighlights.some(h => h > 0)) {
+    plinkoAnimId = requestAnimationFrame(runPlinkoLoop);
+  } else {
+    plinkoAnimId = null;
+  }
+}
+
+async function dropPlinkoBall() {
+  const bet = parseInt(elPlinkoBet.value, 10) || 10;
+  if (bet < 1) {
+    showToast("Минимальная ставка 1 ⭐");
+    return;
+  }
+  if (userBalance < bet) {
+    showToast("Недостаточно звёзд на балансе!");
+    return;
+  }
+
+  plinkoBet = bet;
+  if (elPlinkoDropBtn) elPlinkoDropBtn.disabled = true;
+
+  try {
+    const res = await fetch("/api/plinko/drop", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: userId,
+        bet: plinkoBet,
+        risk: plinkoRisk
+      })
+    }).then(r => r.json());
+
+    if (elPlinkoDropBtn) elPlinkoDropBtn.disabled = false;
+
+    if (!res.ok) {
+      showToast(res.error || "Ошибка пуска шарика");
+      return;
+    }
+
+    userBalance = res.balance;
+    elUserBalance.textContent = userBalance;
+
+    if (elPlinkoStatusBadge) {
+      elPlinkoStatusBadge.textContent = "Шарик летит сквозь препятствия...";
+    }
+
+    const ball = new PlinkoBall(res.path, res.slot_index, res.payout, res.multiplier);
+    plinkoBalls.push(ball);
+
+    if (!plinkoAnimId) {
+      plinkoAnimId = requestAnimationFrame(runPlinkoLoop);
+    }
+
+  } catch (e) {
+    if (elPlinkoDropBtn) elPlinkoDropBtn.disabled = false;
+    showToast("Ошибка сети: " + e.message);
+  }
+}
+
+if (elPlinkoDropBtn) {
+  elPlinkoDropBtn.onclick = dropPlinkoBall;
+}
+
+document.querySelectorAll(".p-risk-chip").forEach(chip => {
+  chip.onclick = () => {
+    document.querySelectorAll(".p-risk-chip").forEach(c => c.classList.remove("active"));
+    chip.classList.add("active");
+    plinkoRisk = chip.dataset.risk;
+    updatePlinkoControls();
+    drawPlinkoBoard();
+  };
+});
+
+document.getElementById("plinko-btn-div2")?.addEventListener("click", () => {
+  let cur = parseInt(elPlinkoBet.value, 10) || 10;
+  elPlinkoBet.value = Math.max(1, Math.floor(cur / 2));
+  plinkoBet = parseInt(elPlinkoBet.value, 10);
+  updatePlinkoControls();
+});
+document.getElementById("plinko-btn-mul2")?.addEventListener("click", () => {
+  let cur = parseInt(elPlinkoBet.value, 10) || 10;
+  elPlinkoBet.value = Math.min(userBalance, cur * 2);
+  plinkoBet = parseInt(elPlinkoBet.value, 10);
+  updatePlinkoControls();
+});
+document.getElementById("plinko-btn-max")?.addEventListener("click", () => {
+  elPlinkoBet.value = Math.max(1, userBalance);
+  plinkoBet = parseInt(elPlinkoBet.value, 10);
+  updatePlinkoControls();
+});
+document.querySelectorAll(".plinko-chip").forEach(chip => {
+  chip.onclick = () => {
+    const amt = parseInt(chip.dataset.amt, 10);
+    elPlinkoBet.value = amt;
+    plinkoBet = amt;
+    updatePlinkoControls();
+  };
+});
+if (elPlinkoBet) {
+  elPlinkoBet.oninput = () => {
+    let b = parseInt(elPlinkoBet.value, 10);
+    if (!isNaN(b) && b > 0) {
+      plinkoBet = b;
+      updatePlinkoControls();
+    }
+  };
+}
+
 // ==================== ЗАЛ СЛАВЫ: ТОП ЗАНОСОВ ====================
 const elLeaderboardModal = document.getElementById("leaderboard-modal");
 const elOpenLeaderboardBtn = document.getElementById("open-leaderboard-btn");
@@ -2756,6 +3683,12 @@ async function loadLeaderboard(period = "day") {
       } else if (g.includes("tower") || g.includes("башн")) {
         gameIcon = "🏰";
         gameName = "Башня";
+      } else if (g.includes("coinflip") || g.includes("монет")) {
+        gameIcon = "🪙";
+        gameName = "Монетка";
+      } else if (g.includes("plinko") || g.includes("плинко")) {
+        gameIcon = "🔴";
+        gameName = "Плинко";
       }
 
       const mult = (typeof item.multiplier === "number") ? item.multiplier.toFixed(2) : parseFloat(item.multiplier || 1).toFixed(2);

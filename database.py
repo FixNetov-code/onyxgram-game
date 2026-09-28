@@ -86,6 +86,49 @@ CREATE TABLE IF NOT EXISTS tower_games (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(user_id)
 );
+
+CREATE TABLE IF NOT EXISTS coinflip_games (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    bet INTEGER NOT NULL,
+    choice TEXT NOT NULL,
+    outcome TEXT NOT NULL,
+    multiplier REAL NOT NULL,
+    payout INTEGER NOT NULL,
+    streak INTEGER DEFAULT 1,
+    status TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS plinko_games (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    bet INTEGER NOT NULL,
+    risk TEXT NOT NULL,
+    rows INTEGER NOT NULL,
+    slot_index INTEGER NOT NULL,
+    multiplier REAL NOT NULL,
+    payout INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS promocodes (
+    code TEXT PRIMARY KEY,
+    reward INTEGER NOT NULL,
+    max_activations INTEGER NOT NULL,
+    used_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS promocode_activations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    activated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(code, user_id)
+);
 """
 
 async def init_db():
@@ -309,8 +352,22 @@ async def get_casino_stats() -> dict:
             tower_in = tw_row["total_bet"] or 0 if tw_row else 0
             tower_out = tw_row["total_payout"] or 0 if tw_row else 0
 
-        total_bets = crash_in + slots_in + mines_in + upgrade_in + tower_in
-        total_payout = crash_out + slots_out + mines_out + upgrade_out + tower_out
+        # Монетка (Coinflip)
+        async with db.execute("SELECT COUNT(*) as cf_cnt, SUM(bet) as total_bet, SUM(payout) as total_payout FROM coinflip_games") as cur:
+            cf_row = await cur.fetchone()
+            coinflip_count = cf_row["cf_cnt"] or 0 if cf_row else 0
+            coinflip_in = cf_row["total_bet"] or 0 if cf_row else 0
+            coinflip_out = cf_row["total_payout"] or 0 if cf_row else 0
+
+        # Плинко (Plinko)
+        async with db.execute("SELECT COUNT(*) as pl_cnt, SUM(bet) as total_bet, SUM(payout) as total_payout FROM plinko_games") as cur:
+            pl_row = await cur.fetchone()
+            plinko_count = pl_row["pl_cnt"] or 0 if pl_row else 0
+            plinko_in = pl_row["total_bet"] or 0 if pl_row else 0
+            plinko_out = pl_row["total_payout"] or 0 if pl_row else 0
+
+        total_bets = crash_in + slots_in + mines_in + upgrade_in + tower_in + coinflip_in + plinko_in
+        total_payout = crash_out + slots_out + mines_out + upgrade_out + tower_out + coinflip_out + plinko_out
         profit = total_bets - total_payout
             
         return {
@@ -321,15 +378,108 @@ async def get_casino_stats() -> dict:
             "mines_games_count": mines_count,
             "upgrade_games_count": upgrade_count,
             "tower_games_count": tower_count,
+            "coinflip_games_count": coinflip_count,
+            "plinko_games_count": plinko_count,
             "crash_bets": crash_in,
             "slots_bets": slots_in,
             "mines_bets": mines_in,
             "upgrade_bets": upgrade_in,
             "tower_bets": tower_in,
+            "coinflip_bets": coinflip_in,
+            "plinko_bets": plinko_in,
             "total_bets": total_bets,
             "total_payout": total_payout,
             "net_profit": profit
         }
+
+# --- Coinflip Games ---
+async def record_coinflip_game(user_id: int, bet: int, choice: str, outcome: str, multiplier: float, payout: int, streak: int, status: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """INSERT INTO coinflip_games (user_id, bet, choice, outcome, multiplier, payout, streak, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (user_id, bet, choice, outcome, multiplier, payout, streak, status)
+        )
+        await db.execute("UPDATE users SET total_bet = total_bet + ?, total_won = total_won + ? WHERE user_id = ?", (bet, payout, user_id))
+        await db.commit()
+
+# --- Plinko Games ---
+async def record_plinko_game(user_id: int, bet: int, risk: str, rows: int, slot_index: int, multiplier: float, payout: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """INSERT INTO plinko_games (user_id, bet, risk, rows, slot_index, multiplier, payout)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (user_id, bet, risk, rows, slot_index, multiplier, payout)
+        )
+        await db.execute("UPDATE users SET total_bet = total_bet + ?, total_won = total_won + ? WHERE user_id = ?", (bet, payout, user_id))
+        await db.commit()
+
+# --- Промокоды (Promocodes) ---
+async def create_promocode(code: str, reward: int, max_activations: int) -> dict:
+    code = code.strip().upper()
+    if not code or reward <= 0 or max_activations <= 0:
+        return {"ok": False, "error": "Некорректные параметры промокода"}
+    async with aiosqlite.connect(DB_PATH) as db:
+        try:
+            await db.execute(
+                "INSERT INTO promocodes (code, reward, max_activations, used_count) VALUES (?, ?, ?, 0)",
+                (code, reward, max_activations)
+            )
+            await db.commit()
+            return {"ok": True, "code": code, "reward": reward, "max_activations": max_activations}
+        except Exception as e:
+            return {"ok": False, "error": f"Такой промокод уже существует ({e})"}
+
+async def list_promocodes() -> list[dict]:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM promocodes ORDER BY created_at DESC") as cur:
+            rows = await cur.fetchall()
+            return [dict(r) for r in rows]
+
+async def delete_promocode(code: str) -> bool:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM promocodes WHERE code = ?", (code.strip().upper(),))
+        await db.commit()
+        return True
+
+async def activate_promocode(code: str, user_id: int) -> dict:
+    code = code.strip().upper()
+    if not code:
+        return {"ok": False, "error": "Введите промокод"}
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM promocodes WHERE code = ?", (code,)) as cur:
+            promo = await cur.fetchone()
+            if not promo:
+                return {"ok": False, "error": "Промокод не найден или устарел ❌"}
+
+        if promo["used_count"] >= promo["max_activations"]:
+            return {"ok": False, "error": "Лимит активаций этого промокода исчерпан! ❌"}
+
+        # Проверяем, не активировал ли юзер ранее
+        async with db.execute("SELECT id FROM promocode_activations WHERE code = ? AND user_id = ?", (code, user_id)) as cur:
+            act = await cur.fetchone()
+            if act:
+                return {"ok": False, "error": "Вы уже активировали этот промокод! ⚠️"}
+
+        # Активируем
+        try:
+            await db.execute("INSERT INTO promocode_activations (code, user_id) VALUES (?, ?)", (code, user_id))
+            await db.execute("UPDATE promocodes SET used_count = used_count + 1 WHERE code = ?", (code,))
+            reward = promo["reward"]
+            await db.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (reward, user_id))
+            await db.commit()
+
+            async with db.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,)) as cur:
+                u_row = await cur.fetchone()
+                new_bal = u_row["balance"] if u_row else reward
+
+            return {"ok": True, "reward": reward, "balance": new_bal, "message": f"Промокод активирован! Вам начислено +{reward} ⭐"}
+        except Exception as e:
+            await db.rollback()
+            return {"ok": False, "error": f"Ошибка активации: {e}"}
 
 async def admin_set_balance(user_id: int, new_balance: int) -> bool:
     async with aiosqlite.connect(DB_PATH) as db:
