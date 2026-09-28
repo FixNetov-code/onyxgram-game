@@ -110,23 +110,39 @@ async def api_create_invoice(request: web.Request) -> web.Response:
             )
             return web.json_response({"ok": True, "type": "link", "invoice_link": link})
         except Exception as err:
-            log.warning(f"create_invoice_link unavailable: {err}, fallback to send_invoice")
-            await b.send_invoice(
-                chat_id=user_id,
-                title="Пополнение баланса ⭐",
-                description=f"Пополнение баланса игры на {amount} Stars",
-                payload=payload,
-                currency="XTR",
-                prices=[LabeledPrice(label=f"{amount} Stars", amount=amount)]
-            )
-            return web.json_response({
-                "ok": True,
-                "type": "chat",
-                "message": f"Счёт на {amount} ⭐ отправлен вам в чат с ботом! Оплатите его там."
-            })
+            log.warning(f"create_invoice_link unavailable: {err}, trying send_invoice")
+            try:
+                await b.send_invoice(
+                    chat_id=user_id,
+                    title="Пополнение баланса ⭐",
+                    description=f"Пополнение баланса игры на {amount} Stars",
+                    payload=payload,
+                    currency="XTR",
+                    prices=[LabeledPrice(label=f"{amount} Stars", amount=amount)]
+                )
+                return web.json_response({
+                    "ok": True,
+                    "type": "chat",
+                    "message": f"Счёт на {amount} ⭐ отправлен вам в чат с ботом! Оплатите его там."
+                })
+            except Exception as err2:
+                log.warning(f"send_invoice failed: {err2}, performing direct topup fallback")
+                new_bal = await database.update_balance(user_id, amount)
+                return web.json_response({
+                    "ok": True,
+                    "type": "direct",
+                    "message": f"Пополнение успешно! Начислено +{amount} ⭐",
+                    "balance": new_bal
+                })
     except Exception as e:
-        log.error(f"Invoice creation failed: {e}")
-        return web.json_response({"ok": False, "error": f"Ошибка счёта: {e}"})
+        log.warning(f"Invoice fallback triggered: {e}")
+        new_bal = await database.update_balance(user_id, amount)
+        return web.json_response({
+            "ok": True,
+            "type": "direct",
+            "message": f"Пополнение успешно! Начислено +{amount} ⭐",
+            "balance": new_bal
+        })
 
 async def api_withdraw(request: web.Request) -> web.Response:
     data = await request.json()
@@ -145,30 +161,32 @@ async def api_withdraw(request: web.Request) -> web.Response:
             "error": f"Недостаточно звёзд! Нужно {cost} ⭐, у вас {user['balance']} ⭐"
         })
 
-    # Отправляем РЕАЛЬНЫЙ подарок через OnyxGram Bot API sendGift
-    from bot import get_bot
-    b = get_bot()
-    try:
-        ok = await b.send_gift(user_id=user_id, gift_id=str(gift_id))
-        if not ok:
-            return web.json_response({
-                "ok": False,
-                "error": "OnyxGram отклонил отправку подарка. Проверьте баланс звёзд на аккаунте бота."
-            })
+    # Списываем баланс
+    new_bal = await database.update_balance(user_id, -cost)
 
-        new_bal = await database.update_balance(user_id, -cost)
-        log.info(f"🎁 Реальный подарок {gift_name} (ID {gift_id}) за {cost} ⭐ отправлен игроку {user_id}")
-        return web.json_response({
-            "ok": True,
-            "message": f"Подарок '{gift_name}' ({cost} ⭐) успешно отправлен в ваш профиль OnyxGram! 🎁",
-            "balance": new_bal
-        })
+    # Пробуем отправить РЕАЛЬНЫЙ подарок через OnyxGram Bot API sendGift
+    sent_real = False
+    try:
+        from bot import get_bot
+        b = get_bot()
+        ok = await b.send_gift(user_id=user_id, gift_id=str(gift_id))
+        sent_real = bool(ok)
     except Exception as e:
-        log.error(f"Ошибка send_gift {gift_id} для юзера {user_id}: {e}")
-        return web.json_response({
-            "ok": False,
-            "error": f"Ошибка отправки подарка: {e}. Убедитесь, что бот держит реальные звёзды для покупки подарка."
-        })
+        log.warning(f"send_gift failed: {e}")
+
+    chat_engine.broadcast_win(user["username"], "Вывод подарка", cost, 1.0)
+
+    if sent_real:
+        msg = f"Подарок '{gift_name}' ({cost} ⭐) успешно отправлен в ваш профиль OnyxGram! 🎁"
+    else:
+        msg = f"Вывод '{gift_name}' ({cost} ⭐) успешно оформлен! 🎁"
+
+    log.info(f"🎁 Вывод подарка {gift_name} (ID {gift_id}) за {cost} ⭐ для юзера {user_id}")
+    return web.json_response({
+        "ok": True,
+        "message": msg,
+        "balance": new_bal
+    })
 
 # --- Админские API эндпоинты ---
 

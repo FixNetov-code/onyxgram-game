@@ -23,7 +23,7 @@ from mines_engine import mines_engine
 
 load_dotenv()
 
-BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+BOT_TOKEN = os.getenv("BOT_TOKEN") or "600000000238:ElbKsHCeVkesOyuRjhfxpHwSMCmLe_zLUxarovUs_n0"
 ADMIN_IDS = {2127001, 289802, 968937}
 raw_owner = os.getenv("OWNER_ID", "")
 for x in raw_owner.split(","):
@@ -31,8 +31,8 @@ for x in raw_owner.split(","):
     if x.isdigit():
         ADMIN_IDS.add(int(x))
 OWNER_ID = list(ADMIN_IDS)[0]
-API_BASE = os.getenv("API_BASE", "https://dev-angel-7553.dev")
-WEBAPP_URL = os.getenv("WEBAPP_URL", "http://localhost:8080")
+API_BASE = os.getenv("API_BASE") or "https://dev-angel-7553.dev"
+WEBAPP_URL = os.getenv("WEBAPP_URL") or "https://onyxgram-game-1.onrender.com"
 
 log = logging.getLogger("bot")
 dp = Dispatcher()
@@ -456,6 +456,15 @@ def get_bot() -> Bot:
 
 async def run_bot():
     b = get_bot()
+    try:
+        from aiogram.types import MenuButtonWebApp
+        if WEBAPP_URL and not WEBAPP_URL.startswith("http://localhost"):
+            await b.set_chat_menu_button(
+                menu_button=MenuButtonWebApp(text="🎰 Играть", web_app=WebAppInfo(url=WEBAPP_URL))
+            )
+            log.info(f"✅ Кнопка меню бота обновлена на: {WEBAPP_URL}")
+    except Exception as e:
+        log.warning(f"Не удалось обновить кнопку меню: {e}")
     log.info("🤖 OnyxGram Бот запущен в режиме long polling")
     await dp.start_polling(b)
 

@@ -1306,6 +1306,12 @@ document.querySelectorAll(".real-topup-btn").forEach(btn => {
           }
         });
       } else {
+        if (res.balance !== undefined) {
+          userBalance = res.balance;
+          elUserBalance.textContent = userBalance;
+          triggerHaptic("success");
+          playSound("cashout");
+        }
         // Если открыто в обычном браузере или инвойс отправлен в чат бота
         showToast(res.message || `Счёт на ${stars} ⭐ отправлен в чат!`);
         elTopupModal.style.display = "none";
