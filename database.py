@@ -129,16 +129,76 @@ CREATE TABLE IF NOT EXISTS promocode_activations (
     activated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(code, user_id)
 );
+
+CREATE TABLE IF NOT EXISTS daily_spins (
+    user_id INTEGER PRIMARY KEY,
+    last_spin_time TIMESTAMP,
+    total_spins INTEGER DEFAULT 0,
+    total_reward INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS referrals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    referrer_id INTEGER NOT NULL,
+    referred_id INTEGER NOT NULL UNIQUE,
+    reward_earned INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS dice_games (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    bet INTEGER NOT NULL,
+    target REAL NOT NULL,
+    condition TEXT NOT NULL,
+    roll REAL NOT NULL,
+    multiplier REAL NOT NULL,
+    payout INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS case_openings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    case_id TEXT NOT NULL,
+    cost INTEGER NOT NULL,
+    reward_type TEXT NOT NULL,
+    reward_title TEXT NOT NULL,
+    reward_amount INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE IF NOT EXISTS pvp_duels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    creator_id INTEGER NOT NULL,
+    creator_name TEXT NOT NULL,
+    bet INTEGER NOT NULL,
+    choice TEXT NOT NULL,
+    opponent_id INTEGER DEFAULT NULL,
+    opponent_name TEXT DEFAULT NULL,
+    winner_id INTEGER DEFAULT NULL,
+    outcome TEXT DEFAULT NULL,
+    status TEXT DEFAULT 'open',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
         await db.executescript(INIT_SQL)
-        # Проверяем наличие колонки is_banned (миграция для существующих баз)
-        try:
-            await db.execute("ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0")
-        except Exception:
-            pass
+        # Проверяем наличие колонок (миграция для существующих баз)
+        for col_def in [
+            "ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN referred_by INTEGER DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN ref_earnings INTEGER DEFAULT 0"
+        ]:
+            try:
+                await db.execute(col_def)
+            except Exception:
+                pass
         await db.commit()
 
 async def get_or_create_user(user_id: int, username: str = "Player") -> dict:
@@ -487,15 +547,184 @@ async def admin_set_balance(user_id: int, new_balance: int) -> bool:
         await db.commit()
         return True
 
+async def admin_set_balance(user_id: int, new_balance: int) -> bool:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE users SET balance = ? WHERE user_id = ?", (new_balance, user_id))
+        await db.commit()
+        return True
+
 async def admin_ban_user(user_id: int, ban: bool) -> bool:
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("UPDATE users SET is_banned = ? WHERE user_id = ?", (1 if ban else 0, user_id))
         await db.commit()
         return True
 
-async def get_all_users() -> list[dict]:
+async def get_all_users(search: str = "") -> list[dict]:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
-        async with db.execute("SELECT user_id, username, balance, is_banned FROM users ORDER BY balance DESC LIMIT 100") as cur:
+        if search:
+            q = f"%{search.strip()}%"
+            async with db.execute(
+                "SELECT user_id, username, balance, total_bet, total_won, is_banned, created_at FROM users WHERE user_id LIKE ? OR username LIKE ? ORDER BY balance DESC LIMIT 150",
+                (q, q)
+            ) as cur:
+                rows = await cur.fetchall()
+        else:
+            async with db.execute(
+                "SELECT user_id, username, balance, total_bet, total_won, is_banned, created_at FROM users ORDER BY balance DESC LIMIT 150"
+            ) as cur:
+                rows = await cur.fetchall()
+        return [dict(r) for r in rows]
+
+# --- Ежедневное Колесо Фортуны (Daily Free Spin) ---
+import datetime
+
+async def get_daily_spin_status(user_id: int) -> dict:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM daily_spins WHERE user_id = ?", (user_id,)) as cur:
+            row = await cur.fetchone()
+            if not row or not row["last_spin_time"]:
+                return {"can_spin": True, "seconds_left": 0, "total_spins": row["total_spins"] if row else 0}
+            
+            try:
+                last_time = datetime.datetime.fromisoformat(str(row["last_spin_time"]))
+            except Exception:
+                return {"can_spin": True, "seconds_left": 0, "total_spins": row["total_spins"]}
+            
+            now = datetime.datetime.utcnow()
+            diff = (now - last_time).total_seconds()
+            cooldown = 24 * 3600  # 24 часа
+            if diff >= cooldown:
+                return {"can_spin": True, "seconds_left": 0, "total_spins": row["total_spins"]}
+            else:
+                return {"can_spin": False, "seconds_left": int(cooldown - diff), "total_spins": row["total_spins"]}
+
+async def claim_daily_spin(user_id: int, reward: int) -> dict:
+    status = await get_daily_spin_status(user_id)
+    if not status["can_spin"]:
+        hrs = status['seconds_left'] // 3600
+        mins = (status['seconds_left'] % 3600) // 60
+        return {"ok": False, "error": f"Следующий спин будет доступен через {hrs} ч. {mins} мин."}
+    
+    now_iso = datetime.datetime.utcnow().isoformat()
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """INSERT INTO daily_spins (user_id, last_spin_time, total_spins, total_reward)
+               VALUES (?, ?, 1, ?)
+               ON CONFLICT(user_id) DO UPDATE SET
+                   last_spin_time = excluded.last_spin_time,
+                   total_spins = total_spins + 1,
+                   total_reward = total_reward + excluded.total_reward""",
+            (user_id, now_iso, reward)
+        )
+        if reward > 0:
+            await db.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (reward, user_id))
+        await db.commit()
+    
+    new_bal = await update_balance(user_id, 0)
+    return {"ok": True, "reward": reward, "balance": new_bal}
+
+# --- Реферальная система (Referrals) ---
+async def register_referral(referrer_id: int, referred_id: int) -> bool:
+    if referrer_id == referred_id or referrer_id <= 0:
+        return False
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT id FROM referrals WHERE referred_id = ?", (referred_id,)) as cur:
+            if await cur.fetchone():
+                return False
+        
+        try:
+            await db.execute("INSERT INTO referrals (referrer_id, referred_id, reward_earned) VALUES (?, ?, 5)", (referrer_id, referred_id))
+            await db.execute("UPDATE users SET balance = balance + 5, ref_earnings = ref_earnings + 5 WHERE user_id = ?", (referrer_id,))
+            await db.execute("UPDATE users SET referred_by = ? WHERE user_id = ?", (referrer_id, referred_id))
+            await db.commit()
+            return True
+        except Exception:
+            return False
+
+async def get_referral_info(user_id: int) -> dict:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT COUNT(*) as count, COALESCE(SUM(reward_earned), 0) as total FROM referrals WHERE referrer_id = ?", (user_id,)) as cur:
+            row = await cur.fetchone()
+            count = row["count"] if row else 0
+            total_earned = row["total"] if row else 0
+        
+        async with db.execute("SELECT u.username, r.reward_earned, r.created_at FROM referrals r JOIN users u ON r.referred_id = u.user_id WHERE r.referrer_id = ? ORDER BY r.created_at DESC LIMIT 20", (user_id,)) as cur:
+            ref_list = [dict(r) for r in await cur.fetchall()]
+            
+        return {
+            "referrals_count": count,
+            "total_earned": total_earned,
+            "friends": ref_list
+        }
+
+# --- Игра Кости (Dice 1-100) ---
+async def record_dice_game(user_id: int, bet: int, target: float, condition: str, roll: float, multiplier: float, payout: int, status: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """INSERT INTO dice_games (user_id, bet, target, condition, roll, multiplier, payout, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (user_id, bet, target, condition, roll, multiplier, payout, status)
+        )
+        await db.execute("UPDATE users SET total_bet = total_bet + ?, total_won = total_won + ? WHERE user_id = ?", (bet, payout, user_id))
+        await db.commit()
+
+# --- Игра Кейсы (Cases) ---
+async def record_case_opening(user_id: int, case_id: str, cost: int, reward_type: str, reward_title: str, reward_amount: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """INSERT INTO case_openings (user_id, case_id, cost, reward_type, reward_title, reward_amount)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (user_id, case_id, cost, reward_type, reward_title, reward_amount)
+        )
+        await db.execute("UPDATE users SET total_bet = total_bet + ?, total_won = total_won + ? WHERE user_id = ?", (cost, reward_amount, user_id))
+        await db.commit()
+
+# --- PvP Дуэли (PvP Coinflip 1v1) ---
+async def create_pvp_duel(creator_id: int, creator_name: str, bet: int, choice: str) -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            """INSERT INTO pvp_duels (creator_id, creator_name, bet, choice, status)
+               VALUES (?, ?, ?, ?, 'open')""",
+            (creator_id, creator_name, bet, choice)
+        )
+        duel_id = cur.lastrowid
+        await db.commit()
+        return duel_id
+
+async def list_open_pvp_duels() -> list[dict]:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM pvp_duels WHERE status = 'open' ORDER BY created_at DESC LIMIT 30") as cur:
             rows = await cur.fetchall()
             return [dict(r) for r in rows]
+
+async def get_pvp_duel(duel_id: int) -> dict | None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM pvp_duels WHERE id = ?", (duel_id,)) as cur:
+            row = await cur.fetchone()
+            return dict(row) if row else None
+
+async def join_pvp_duel(duel_id: int, opponent_id: int, opponent_name: str, winner_id: int, outcome: str) -> bool:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """UPDATE pvp_duels
+               SET opponent_id = ?, opponent_name = ?, winner_id = ?, outcome = ?, status = 'finished'
+               WHERE id = ? AND status = 'open'""",
+            (opponent_id, opponent_name, winner_id, outcome, duel_id)
+        )
+        await db.commit()
+        return True
+
+async def cancel_pvp_duel(duel_id: int, user_id: int) -> bool:
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "UPDATE pvp_duels SET status = 'cancelled' WHERE id = ? AND creator_id = ? AND status = 'open'",
+            (duel_id, user_id)
+        )
+        await db.commit()
+        return cur.rowcount > 0

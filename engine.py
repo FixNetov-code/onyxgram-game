@@ -274,6 +274,8 @@ class CrashGameEngine:
             return {"ok": False, "error": "Неверная сумма ставки"}
 
         user = await database.get_or_create_user(user_id, username)
+        if user.get("is_banned"):
+            return {"ok": False, "error": "Ваш аккаунт заблокирован!"}
         if user["balance"] < amount:
             return {"ok": False, "error": "Недостаточно звёзд на балансе!"}
 

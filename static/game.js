@@ -239,6 +239,9 @@ const elViewUpgrade = document.getElementById("view-upgrade");
 const elViewTower = document.getElementById("view-tower");
 const elViewCoinflip = document.getElementById("view-coinflip");
 const elViewPlinko = document.getElementById("view-plinko");
+const elViewDice = document.getElementById("view-dice");
+const elViewCases = document.getElementById("view-cases");
+const elViewPvp = document.getElementById("view-pvp");
 const elBackLobbyBtn = document.getElementById("back-lobby-btn");
 
 function switchView(viewName) {
@@ -250,6 +253,9 @@ function switchView(viewName) {
   if (elViewTower) elViewTower.style.display = viewName === "tower" ? "flex" : "none";
   if (elViewCoinflip) elViewCoinflip.style.display = viewName === "coinflip" ? "flex" : "none";
   if (elViewPlinko) elViewPlinko.style.display = viewName === "plinko" ? "flex" : "none";
+  if (elViewDice) elViewDice.style.display = viewName === "dice" ? "flex" : "none";
+  if (elViewCases) elViewCases.style.display = viewName === "cases" ? "flex" : "none";
+  if (elViewPvp) elViewPvp.style.display = viewName === "pvp" ? "flex" : "none";
 
   if (viewName === "lobby") {
     if (elBackLobbyBtn) elBackLobbyBtn.style.display = "none";
@@ -269,6 +275,12 @@ function switchView(viewName) {
       initCoinflipUI();
     } else if (viewName === "plinko") {
       initPlinkoUI();
+    } else if (viewName === "dice") {
+      initDiceUI();
+    } else if (viewName === "cases") {
+      initCasesUI();
+    } else if (viewName === "pvp") {
+      initPvpUI();
     }
   }
 }
@@ -293,6 +305,15 @@ if (document.getElementById("card-play-coinflip")) {
 }
 if (document.getElementById("card-play-plinko")) {
   document.getElementById("card-play-plinko").onclick = () => switchView("plinko");
+}
+if (document.getElementById("card-play-dice")) {
+  document.getElementById("card-play-dice").onclick = () => switchView("dice");
+}
+if (document.getElementById("card-play-cases")) {
+  document.getElementById("card-play-cases").onclick = () => switchView("cases");
+}
+if (document.getElementById("card-play-pvp")) {
+  document.getElementById("card-play-pvp").onclick = () => switchView("pvp");
 }
 if (elBackLobbyBtn) {
   elBackLobbyBtn.onclick = () => switchView("lobby");
@@ -350,6 +371,9 @@ document.querySelectorAll(".adm-tab-pill").forEach(pill => {
     if (targetTab === "adm-tab-promo" && typeof refreshAdminPromos === "function") {
       refreshAdminPromos();
     }
+    if (targetTab === "adm-tab-users" && typeof refreshAdminUsers === "function") {
+      refreshAdminUsers();
+    }
   };
 });
 
@@ -373,6 +397,10 @@ async function refreshAdminStats() {
       if (coinflipBetsEl) coinflipBetsEl.textContent = `${res.coinflip_bets || 0} ⭐`;
       const plinkoBetsEl = document.getElementById("adm-plinko-bets-cnt");
       if (plinkoBetsEl) plinkoBetsEl.textContent = `${res.plinko_bets || 0} ⭐`;
+      const diceBetsEl = document.getElementById("adm-dice-bets-cnt");
+      if (diceBetsEl) diceBetsEl.textContent = `${res.dice_bets || 0} ⭐`;
+      const casesBetsEl = document.getElementById("adm-cases-bets-cnt");
+      if (casesBetsEl) casesBetsEl.textContent = `${res.cases_bets || 0} ⭐`;
 
       // Режим RTP Crash
       document.querySelectorAll(".seg-btn").forEach(btn => {
@@ -409,13 +437,25 @@ async function refreshAdminStats() {
         btn.classList.toggle("active", btn.dataset.mode === (res.plinko_rig_mode || "normal"));
       });
 
+      // Режим RTP Dice
+      document.querySelectorAll(".seg-btn-dice").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.mode === (res.dice_rig_mode || "normal"));
+      });
+
+      // Режим RTP Cases
+      document.querySelectorAll(".seg-btn-cases").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.mode === (res.cases_rig_mode || "normal"));
+      });
+
       // Мастер-RTP (если все игры совпадают)
       const masterTag = document.getElementById("adm-master-rtp-tag");
       const upMode = res.upgrade_rig_mode || res.rig_mode;
       const towerMode = res.tower_rig_mode || res.rig_mode;
       const cfMode = res.coinflip_rig_mode || res.rig_mode;
       const plMode = res.plinko_rig_mode || res.rig_mode;
-      if (res.rig_mode === res.slots_rig_mode && res.rig_mode === res.mines_rig_mode && res.rig_mode === upMode && res.rig_mode === towerMode && res.rig_mode === cfMode && res.rig_mode === plMode) {
+      const dMode = res.dice_rig_mode || res.rig_mode;
+      const csMode = res.cases_rig_mode || res.rig_mode;
+      if (res.rig_mode === res.slots_rig_mode && res.rig_mode === res.mines_rig_mode && res.rig_mode === upMode && res.rig_mode === towerMode && res.rig_mode === cfMode && res.rig_mode === plMode && res.rig_mode === dMode && res.rig_mode === csMode) {
         document.querySelectorAll(".seg-btn-global").forEach(btn => {
           btn.classList.toggle("active", btn.dataset.mode === res.rig_mode);
         });
@@ -1541,16 +1581,16 @@ document.querySelectorAll(".real-topup-btn").forEach(btn => {
         window.Telegram.WebApp.openInvoice(res.invoice_link, async (status) => {
           if (status === "paid") {
             try {
-              const u = await fetch("/api/topup", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: userId, amount: stars })
-              }).then(r => r.json());
-              if (u.ok) {
+              // Даем боту 500мс обработать successful_payment от Telegram
+              await new Promise(r => setTimeout(r, 600));
+              const u = await fetch(`/api/user?id=${userId}&name=${encodeURIComponent(userName)}`).then(r => r.json());
+              if (u && typeof u.balance === "number") {
                 userBalance = u.balance;
                 elUserBalance.textContent = userBalance;
               }
-            } catch (err) {}
+            } catch (err) {
+              console.error("Balance sync error:", err);
+            }
             showToast(`✅ Оплата прошла успешно! +${stars} ⭐`);
             triggerHaptic("success");
             playSound("cashout");
@@ -3902,6 +3942,791 @@ if (elChatForm) {
   };
 }
 
+// ==================== РЕФЕРАЛЬНАЯ СИСТЕМА ====================
+const elReferralsModal = document.getElementById("referrals-modal");
+const elOpenReferralsBtn = document.getElementById("open-referrals-btn");
+const elCloseReferralsBtn = document.getElementById("close-referrals-btn");
+const elRefCountVal = document.getElementById("ref-count-val");
+const elRefEarnedVal = document.getElementById("ref-earned-val");
+const elRefLinkInput = document.getElementById("ref-link-input");
+const elRefCopyBtn = document.getElementById("ref-copy-btn");
+const elRefShareBtn = document.getElementById("ref-share-btn");
+const elRefFriendsList = document.getElementById("ref-friends-list");
+
+function getReferralLink() {
+  const botUser = "OnyxCasino_bot";
+  return `https://t.me/${botUser}?start=ref_${userId}`;
+}
+
+async function loadReferralsData() {
+  if (elRefLinkInput) elRefLinkInput.value = getReferralLink();
+  try {
+    const res = await fetch(`/api/referrals?id=${userId}`).then(r => r.json());
+    if (res.ok) {
+      if (elRefCountVal) elRefCountVal.textContent = res.referrals_count;
+      if (elRefEarnedVal) elRefEarnedVal.textContent = `${res.total_earned} ⭐`;
+
+      if (elRefFriendsList) {
+        if (!res.friends || res.friends.length === 0) {
+          elRefFriendsList.innerHTML = `<div class="ref-empty-state">У вас пока нет приглашённых друзей</div>`;
+        } else {
+          elRefFriendsList.innerHTML = res.friends.map(f => `
+            <div class="adm-promo-item">
+              <span class="adm-promo-code">@${escapeHtml(f.username || "Игрок")}</span>
+              <span class="adm-promo-meta">+${f.reward_earned} ⭐</span>
+            </div>
+          `).join("");
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Referrals load error:", e);
+  }
+}
+
+function initReferrals() {
+  if (elOpenReferralsBtn) {
+    elOpenReferralsBtn.onclick = () => {
+      if (elReferralsModal) elReferralsModal.style.display = "flex";
+      loadReferralsData();
+    };
+  }
+
+  if (elCloseReferralsBtn) {
+    elCloseReferralsBtn.onclick = () => {
+      if (elReferralsModal) elReferralsModal.style.display = "none";
+    };
+  }
+
+  if (elRefCopyBtn) {
+    elRefCopyBtn.onclick = () => {
+      const link = getReferralLink();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(() => {
+          showToast("Ссылка-приглашение скопирована! 📋");
+        }).catch(() => {
+          if (elRefLinkInput) {
+            elRefLinkInput.select();
+            document.execCommand("copy");
+            showToast("Ссылка-приглашение скопирована! 📋");
+          }
+        });
+      } else if (elRefLinkInput) {
+        elRefLinkInput.select();
+        document.execCommand("copy");
+        showToast("Ссылка-приглашение скопирована! 📋");
+      }
+    };
+  }
+
+  if (elRefShareBtn) {
+    elRefShareBtn.onclick = () => {
+      const link = getReferralLink();
+      const shareText = "🎰 Заходи в Onyx Casino! Играй в Ракету, Слоты 777, Минёр, Кости и Кейсы со звездами Telegram Stars! 🚀⭐";
+      const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(shareText)}`;
+      window.open(tgUrl, "_blank");
+    };
+  }
+}
+
+// ==================== АДМИНКА: УПРАВЛЕНИЕ ИГРОКАМИ (БАНЫ / БАЛАНС) ====================
+const elAdmUsersList = document.getElementById("adm-users-list");
+const elAdmUsersSearchInput = document.getElementById("adm-users-search-input");
+const elAdmUsersSearchBtn = document.getElementById("adm-users-search-btn");
+const elAdmUsersRefreshBtn = document.getElementById("adm-users-refresh-btn");
+
+async function refreshAdminUsers(search = "") {
+  if (!elAdmUsersList) return;
+  elAdmUsersList.innerHTML = `<div class="adm-empty-list">Загрузка игроков...</div>`;
+
+  try {
+    const q = search || (elAdmUsersSearchInput ? elAdmUsersSearchInput.value.trim() : "");
+    const res = await fetch(`/api/admin/users/list?id=${userId}&search=${encodeURIComponent(q)}`).then(r => r.json());
+    if (res.ok) {
+      if (!res.users || res.users.length === 0) {
+        elAdmUsersList.innerHTML = `<div class="adm-empty-list">Игроки не найдены</div>`;
+        return;
+      }
+
+      elAdmUsersList.innerHTML = res.users.map(u => {
+        const isBanned = !!u.is_banned;
+        return `
+          <div class="adm-user-row ${isBanned ? "banned" : ""}" data-uid="${u.user_id}">
+            <div class="adm-user-header">
+              <div>
+                <span class="adm-user-name">${escapeHtml(u.username || "Игрок")}</span>
+                <span class="adm-user-id">#${u.user_id}</span>
+              </div>
+              ${isBanned ? '<span class="adm-user-banned-tag">ЗАБАНЕН</span>' : '<span style="color:#10b981;font-size:11px;font-weight:700;">🟢 Активен</span>'}
+            </div>
+            <div class="adm-user-details">
+              <span>Баланс: <b class="adm-user-bal">${u.balance} ⭐</b></span>
+              <span>Ставок: ${u.total_bet || 0} ⭐ • Выиграно: ${u.total_won || 0} ⭐</span>
+            </div>
+            <div class="adm-user-actions-bar">
+              <input type="number" class="adm-user-new-bal" placeholder="Новый баланс" min="0" step="1" value="${u.balance}">
+              <button class="adm-set-bal-btn" onclick="adminSetUserBalance(${u.user_id}, this)">Задать ⭐</button>
+              ${isBanned 
+                ? `<button class="adm-unban-btn" onclick="adminToggleUserBan(${u.user_id}, false)">🟢 Разбанить</button>`
+                : `<button class="adm-ban-btn" onclick="adminToggleUserBan(${u.user_id}, true)">🚫 Бан</button>`}
+            </div>
+          </div>
+        `;
+      }).join("");
+    } else {
+      elAdmUsersList.innerHTML = `<div class="adm-empty-list" style="color:#ef4444;">${res.error || "Ошибка загрузки"}</div>`;
+    }
+  } catch (err) {
+    elAdmUsersList.innerHTML = `<div class="adm-empty-list" style="color:#ef4444;">Ошибка: ${err.message}</div>`;
+  }
+}
+
+async function adminToggleUserBan(targetId, ban) {
+  try {
+    const res = await fetch("/api/admin/users/ban", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ admin_id: userId, target_id: targetId, ban: ban })
+    }).then(r => r.json());
+
+    if (res.ok) {
+      showToast(ban ? `Игрок #${targetId} заблокирован!` : `Игрок #${targetId} разблокирован!`);
+      refreshAdminUsers();
+    } else {
+      showToast(res.error || "Ошибка изменения статуса");
+    }
+  } catch (e) {
+    showToast("Ошибка: " + e.message);
+  }
+}
+
+async function adminSetUserBalance(targetId, btnEl) {
+  const row = btnEl.closest(".adm-user-row");
+  const input = row ? row.querySelector(".adm-user-new-bal") : null;
+  if (!input) return;
+  const newBal = parseInt(input.value, 10);
+  if (isNaN(newBal) || newBal < 0) {
+    showToast("Введите корректный баланс");
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/admin/set_balance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ admin_id: userId, target_id: targetId, balance: newBal })
+    }).then(r => r.json());
+
+    if (res.ok) {
+      showToast(`Баланс игрока #${targetId} установлен на ${res.balance} ⭐`);
+      refreshAdminUsers();
+      if (targetId === Number(userId)) {
+        userBalance = res.balance;
+        elUserBalance.textContent = userBalance;
+      }
+    } else {
+      showToast(res.error || "Ошибка изменения баланса");
+    }
+  } catch (e) {
+    showToast("Ошибка: " + e.message);
+  }
+}
+
+// ==================== АДМИНКА: КОСТИ И КЕЙСЫ ====================
+function initAdminDiceAndCases() {
+  if (elAdmUsersSearchBtn) {
+    elAdmUsersSearchBtn.onclick = () => refreshAdminUsers();
+  }
+  if (elAdmUsersRefreshBtn) {
+    elAdmUsersRefreshBtn.onclick = () => refreshAdminUsers();
+  }
+
+  // Принудительный исход Костей
+  document.querySelectorAll(".adm-dice-force-btn").forEach(btn => {
+    btn.onclick = async () => {
+      const outcome = btn.dataset.outcome === "reset" ? null : btn.dataset.outcome;
+      try {
+        const res = await fetch("/api/admin/dice/force", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: userId, outcome: outcome })
+        }).then(r => r.json());
+        if (res.ok) {
+          showToast(outcome ? `Кости: следующий исход '${outcome}'!` : "Кости: принудительный исход сброшен");
+        }
+      } catch (e) { showToast("Ошибка: " + e.message); }
+    };
+  });
+
+  // RTP Костей
+  document.querySelectorAll(".seg-btn-dice").forEach(btn => {
+    btn.onclick = async () => {
+      const mode = btn.dataset.mode;
+      try {
+        const res = await fetch("/api/admin/dice/rig", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: userId, mode: mode })
+        }).then(r => r.json());
+        if (res.ok) {
+          document.querySelectorAll(".seg-btn-dice").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+          const tag = document.getElementById("adm-dice-rtp-tag");
+          if (tag) tag.textContent = RTP_LABELS[mode] || mode;
+          showToast(`Кости: режим RTP '${mode}' сохранён!`);
+        }
+      } catch (e) { showToast("Ошибка: " + e.message); }
+    };
+  });
+
+  // Принудительный исход Кейсов
+  document.querySelectorAll(".adm-cases-force-btn").forEach(btn => {
+    btn.onclick = async () => {
+      const item = btn.dataset.item === "reset" ? null : btn.dataset.item;
+      try {
+        const res = await fetch("/api/admin/cases/force", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: userId, item_id: item })
+        }).then(r => r.json());
+        if (res.ok) {
+          showToast(item ? `Кейсы: следующий дроп ID '${item}'!` : "Кейсы: принудительный дроп сброшен");
+        }
+      } catch (e) { showToast("Ошибка: " + e.message); }
+    };
+  });
+
+  // RTP Кейсов
+  document.querySelectorAll(".seg-btn-cases").forEach(btn => {
+    btn.onclick = async () => {
+      const mode = btn.dataset.mode;
+      try {
+        const res = await fetch("/api/admin/cases/rig", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: userId, mode: mode })
+        }).then(r => r.json());
+        if (res.ok) {
+          document.querySelectorAll(".seg-btn-cases").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+          const tag = document.getElementById("adm-cases-rtp-tag");
+          if (tag) tag.textContent = RTP_LABELS[mode] || mode;
+          showToast(`Кейсы: режим RTP '${mode}' сохранён!`);
+        }
+      } catch (e) { showToast("Ошибка: " + e.message); }
+    };
+  });
+}
+
+// ==================== ИГРА 8: КОСТИ (DICE 1-100) ====================
+let diceCondition = "under";
+let diceTarget = 50.0;
+let diceBet = 10;
+let isDiceRolling = false;
+
+function calcDiceMultiplier(winChance) {
+  winChance = Math.max(1.0, Math.min(95.0, winChance));
+  return Number((97.0 / winChance).toFixed(2));
+}
+
+function updateDiceUI() {
+  const elSlider = document.getElementById("dice-slider");
+  const elUnderVal = document.getElementById("dice-target-under-val");
+  const elOverVal = document.getElementById("dice-target-over-val");
+  const elMultLabel = document.getElementById("dice-mult-label");
+  const elChanceLabel = document.getElementById("dice-chance-label");
+  const elPayoutLabel = document.getElementById("dice-payout-label");
+
+  if (elSlider) diceTarget = parseFloat(elSlider.value);
+  if (elUnderVal) elUnderVal.textContent = diceTarget.toFixed(2);
+  if (elOverVal) elOverVal.textContent = diceTarget.toFixed(2);
+
+  let winChance = diceCondition === "under" ? diceTarget : (100.0 - diceTarget);
+  winChance = Math.max(1.0, Math.min(95.0, winChance));
+  const mult = calcDiceMultiplier(winChance);
+  const payout = Math.floor(diceBet * mult);
+
+  if (elChanceLabel) elChanceLabel.textContent = `${winChance.toFixed(2)}%`;
+  if (elMultLabel) elMultLabel.textContent = `${mult.toFixed(2)}x`;
+  if (elPayoutLabel) elPayoutLabel.textContent = `${payout} ⭐`;
+
+  // Подсветка ползунка
+  if (elSlider) {
+    const pct = ((diceTarget - 1) / (95 - 1)) * 100;
+    if (diceCondition === "under") {
+      elSlider.style.background = `linear-gradient(to right, #10b981 0%, #10b981 ${pct}%, #ef4444 ${pct}%, #ef4444 100%)`;
+    } else {
+      elSlider.style.background = `linear-gradient(to right, #ef4444 0%, #ef4444 ${pct}%, #10b981 ${pct}%, #10b981 100%)`;
+    }
+  }
+}
+
+function initDiceUI() {
+  const elSlider = document.getElementById("dice-slider");
+  const elBetInput = document.getElementById("dice-bet-amount");
+  const elRollBtn = document.getElementById("dice-roll-btn");
+  const elCondUnder = document.getElementById("dice-cond-under");
+  const elCondOver = document.getElementById("dice-cond-over");
+
+  if (elSlider) {
+    elSlider.oninput = () => updateDiceUI();
+  }
+
+  if (elBetInput) {
+    elBetInput.oninput = () => {
+      diceBet = Math.max(1, parseInt(elBetInput.value || "1", 10));
+      updateDiceUI();
+    };
+  }
+
+  if (elCondUnder && elCondOver) {
+    elCondUnder.onclick = () => {
+      diceCondition = "under";
+      elCondUnder.classList.add("active");
+      elCondOver.classList.remove("active");
+      updateDiceUI();
+    };
+    elCondOver.onclick = () => {
+      diceCondition = "over";
+      elCondOver.classList.add("active");
+      elCondUnder.classList.remove("active");
+      updateDiceUI();
+    };
+  }
+
+  // Фишки
+  document.querySelectorAll(".dice-chip").forEach(chip => {
+    chip.onclick = () => {
+      diceBet = parseInt(chip.dataset.amt, 10);
+      if (elBetInput) elBetInput.value = diceBet;
+      updateDiceUI();
+    };
+  });
+
+  const bDiv2 = document.getElementById("dice-btn-div2");
+  if (bDiv2) bDiv2.onclick = () => {
+    diceBet = Math.max(1, Math.floor(diceBet / 2));
+    if (elBetInput) elBetInput.value = diceBet;
+    updateDiceUI();
+  };
+  const bMul2 = document.getElementById("dice-btn-mul2");
+  if (bMul2) bMul2.onclick = () => {
+    diceBet = Math.min(userBalance || 100000, diceBet * 2);
+    if (elBetInput) elBetInput.value = diceBet;
+    updateDiceUI();
+  };
+  const bMax = document.getElementById("dice-btn-max");
+  if (bMax) bMax.onclick = () => {
+    diceBet = Math.max(1, userBalance);
+    if (elBetInput) elBetInput.value = diceBet;
+    updateDiceUI();
+  };
+
+  if (elRollBtn) {
+    elRollBtn.onclick = async () => {
+      if (isDiceRolling) return;
+      if (userBalance < diceBet) {
+        showToast("Недостаточно звёзд на балансе!");
+        return;
+      }
+
+      isDiceRolling = true;
+      elRollBtn.disabled = true;
+
+      const elNum = document.getElementById("dice-result-number");
+      const elStatus = document.getElementById("dice-result-status");
+      const elBox = document.getElementById("dice-display-box");
+      if (elBox) elBox.className = "dice-display-box";
+      if (elStatus) elStatus.textContent = "Бросок костей...";
+
+      // Быстрая анимация счетчика
+      const rollInterval = setInterval(() => {
+        if (elNum) elNum.textContent = (Math.random() * 99.99).toFixed(2);
+      }, 50);
+
+      playSound("beep");
+
+      try {
+        const res = await fetch("/api/dice/roll", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: userId,
+            bet: diceBet,
+            target: diceTarget,
+            condition: diceCondition
+          })
+        }).then(r => r.json());
+
+        setTimeout(() => {
+          clearInterval(rollInterval);
+          isDiceRolling = false;
+          elRollBtn.disabled = false;
+
+          if (!res.ok) {
+            showToast(res.error || "Ошибка броска");
+            if (elStatus) elStatus.textContent = "Ошибка";
+            return;
+          }
+
+          userBalance = res.balance;
+          elUserBalance.textContent = userBalance;
+
+          if (elNum) elNum.textContent = res.roll.toFixed(2);
+
+          if (res.win) {
+            playSound("cashout");
+            if (elBox) elBox.classList.add("win");
+            if (elStatus) elStatus.textContent = `ВЫИГРЫШ! +${res.payout} ⭐ (${res.multiplier}x)`;
+            showToast(`🎉 Победа! Вы выиграли ${res.payout} ⭐!`);
+          } else {
+            playSound("crash");
+            if (elBox) elBox.classList.add("loss");
+            if (elStatus) elStatus.textContent = "Не повезло, попробуйте еще раз!";
+          }
+        }, 600);
+      } catch (err) {
+        clearInterval(rollInterval);
+        isDiceRolling = false;
+        elRollBtn.disabled = false;
+        showToast("Ошибка сети: " + err.message);
+      }
+    };
+  }
+
+  updateDiceUI();
+}
+
+// ==================== ИГРА 9: КЕЙСЫ (CASES / ЛУТБОКСЫ) ====================
+let casesCatalog = null;
+let activeCaseId = "novice";
+let isCaseOpening = false;
+
+async function loadCasesCatalog() {
+  try {
+    const res = await fetch("/api/cases/list").then(r => r.json());
+    if (res.ok) {
+      casesCatalog = res.cases;
+      renderActiveCase();
+    }
+  } catch (e) {
+    console.error("Cases catalog error:", e);
+  }
+}
+
+function renderActiveCase() {
+  if (!casesCatalog) return;
+  const c = casesCatalog[activeCaseId];
+  if (!c) return;
+
+  const elBtn = document.getElementById("case-open-btn");
+  const elOpenText = document.getElementById("case-open-text");
+  if (elOpenText) elOpenText.textContent = `ОТКРЫТЬ ЗА ${c.cost} ⭐`;
+
+  const elGrid = document.getElementById("case-items-grid");
+  if (elGrid) {
+    elGrid.innerHTML = c.items.map(it => `
+      <div class="case-preview-item" style="--item-color: ${it.color};">
+        <span class="cp-icon">${it.icon}</span>
+        <span class="cp-name">${escapeHtml(it.name)}</span>
+        <span class="cp-amount">${it.amount} ⭐</span>
+      </div>
+    `).join("");
+  }
+
+  // Заполняем начальную ленту рулетки
+  const track = document.getElementById("roulette-track");
+  if (track) {
+    track.style.transition = "none";
+    track.style.transform = "translateX(0px)";
+    const initialItems = [];
+    for (let i = 0; i < 35; i++) {
+      initialItems.push(c.items[i % c.items.length]);
+    }
+    track.innerHTML = initialItems.map(it => `
+      <div class="roulette-item-card" style="--item-color: ${it.color};">
+        <span class="r-item-icon">${it.icon}</span>
+        <span class="r-item-name">${escapeHtml(it.name)}</span>
+        <span class="r-item-amount">${it.amount} ⭐</span>
+      </div>
+    `).join("");
+  }
+}
+
+function initCasesUI() {
+  loadCasesCatalog();
+
+  document.querySelectorAll(".case-select-tab").forEach(tab => {
+    tab.onclick = () => {
+      if (isCaseOpening) return;
+      document.querySelectorAll(".case-select-tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      activeCaseId = tab.dataset.case;
+      renderActiveCase();
+    };
+  });
+
+  const elOpenBtn = document.getElementById("case-open-btn");
+  if (elOpenBtn) {
+    elOpenBtn.onclick = async () => {
+      if (isCaseOpening) return;
+      if (!casesCatalog || !casesCatalog[activeCaseId]) return;
+
+      const cost = casesCatalog[activeCaseId].cost;
+      if (userBalance < cost) {
+        showToast(`Недостаточно звёзд! Нужно ${cost} ⭐`);
+        return;
+      }
+
+      isCaseOpening = true;
+      elOpenBtn.disabled = true;
+
+      try {
+        const res = await fetch("/api/cases/open", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: userId, case_id: activeCaseId })
+        }).then(r => r.json());
+
+        if (!res.ok) {
+          showToast(res.error || "Ошибка открытия кейса");
+          isCaseOpening = false;
+          elOpenBtn.disabled = false;
+          return;
+        }
+
+        const reel = res.reel || [];
+        const winIdx = 30; // Выигрышный индекс в ленте
+        const track = document.getElementById("roulette-track");
+        const container = document.querySelector(".cases-roulette-container");
+
+        if (track && container) {
+          track.style.transition = "none";
+          track.style.transform = "translateX(0px)";
+
+          // Отрисовываем серверную ленту
+          track.innerHTML = reel.map(it => `
+            <div class="roulette-item-card" style="--item-color: ${it.color};">
+              <span class="r-item-icon">${it.icon}</span>
+              <span class="r-item-name">${escapeHtml(it.name)}</span>
+              <span class="r-item-amount">${it.amount} ⭐</span>
+            </div>
+          `).join("");
+
+          void track.offsetWidth; // Force reflow
+
+          const cardWidth = 90;
+          const containerWidth = container.offsetWidth;
+          // Центрируем выигрышный элемент точно под маркером с небольшим разбросом
+          const randomOffset = (Math.random() - 0.5) * 35;
+          const targetTranslate = - (winIdx * cardWidth - (containerWidth / 2) + (cardWidth / 2) + randomOffset);
+
+          track.style.transition = "transform 5.5s cubic-bezier(0.12, 0.8, 0.2, 1)";
+          track.style.transform = `translateX(${targetTranslate}px)`;
+
+          playSound("reel_stop");
+
+          setTimeout(() => {
+            isCaseOpening = false;
+            elOpenBtn.disabled = false;
+            userBalance = res.balance;
+            elUserBalance.textContent = userBalance;
+
+            const won = res.won_item;
+            if (won.rarity === "legendary" || won.rarity === "epic") {
+              playSound("jackpot");
+            } else {
+              playSound("cashout");
+            }
+            showToast(`🎁 Вы открыли ${res.case.name}: выигрыш ${won.name} (+${won.amount} ⭐)!`);
+          }, 5600);
+        }
+      } catch (err) {
+        isCaseOpening = false;
+        elOpenBtn.disabled = false;
+        showToast("Ошибка сети: " + err.message);
+      }
+    };
+  }
+}
+
+// ==================== ИГРА 10: PvP ДУЭЛИ (1v1) ====================
+let pvpSelectedSide = "heads";
+let isPvPPlaying = false;
+
+async function refreshPvPDuels() {
+  const elList = document.getElementById("pvp-duels-list");
+  const elCount = document.getElementById("pvp-open-count");
+  if (!elList) return;
+
+  try {
+    const res = await fetch("/api/pvp/list").then(r => r.json());
+    if (res.ok) {
+      const duels = res.duels || [];
+      if (elCount) elCount.textContent = `${duels.length} лобби`;
+
+      if (duels.length === 0) {
+        elList.innerHTML = `<div class="pvp-empty-msg">Пока нет открытых дуэлей. Создайте первую!</div>`;
+        return;
+      }
+
+      elList.innerHTML = duels.map(d => {
+        const isMy = d.creator_id === Number(userId);
+        const choiceText = d.choice === "heads" ? "🦅 Орёл" : "🪙 Решка";
+        return `
+          <div class="pvp-duel-item" data-duel-id="${d.id}">
+            <div class="pvp-duel-info">
+              <span class="pvp-duel-creator">${escapeHtml(d.creator_name)} ${isMy ? "(Вы)" : ""}</span>
+              <span class="pvp-duel-meta">Ставка: <b>${d.bet} ⭐</b> • Сторона: ${choiceText}</span>
+            </div>
+            ${isMy 
+              ? `<button class="pvp-cancel-btn" onclick="cancelPvPDuel(${d.id})">Отменить</button>`
+              : `<button class="pvp-join-btn" onclick="joinPvPDuel(${d.id})">Сразиться (${d.bet} ⭐)</button>`}
+          </div>
+        `;
+      }).join("");
+    }
+  } catch (e) {
+    console.error("PvP list error:", e);
+  }
+}
+
+async function cancelPvPDuel(duelId) {
+  try {
+    const res = await fetch("/api/pvp/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: userId, duel_id: duelId })
+    }).then(r => r.json());
+    if (res.ok) {
+      showToast("Дуэль отменена, ставка возвращена! ⭐");
+      userBalance = res.balance;
+      elUserBalance.textContent = userBalance;
+      refreshPvPDuels();
+    } else {
+      showToast(res.error || "Не удалось отменить");
+    }
+  } catch (e) { showToast("Ошибка: " + e.message); }
+}
+
+async function joinPvPDuel(duelId) {
+  if (isPvPPlaying) return;
+  isPvPPlaying = true;
+
+  const elArena = document.getElementById("pvp-arena-card");
+  const elCoin = document.getElementById("pvp-coin-disc");
+  const elMsg = document.getElementById("pvp-result-msg");
+
+  if (elArena) elArena.style.display = "block";
+  if (elMsg) elMsg.textContent = "Бросок монеты...";
+  if (elCoin) elCoin.classList.add("flipping");
+  playSound("coin_flip");
+
+  try {
+    const res = await fetch("/api/pvp/join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: userId, duel_id: duelId })
+    }).then(r => r.json());
+
+    setTimeout(() => {
+      if (elCoin) elCoin.classList.remove("flipping");
+      isPvPPlaying = false;
+
+      if (!res.ok) {
+        showToast(res.error || "Ошибка участия в дуэли");
+        if (elArena) elArena.style.display = "none";
+        return;
+      }
+
+      const outcomeSym = res.outcome === "heads" ? "🦅" : "🪙";
+      if (elCoin) elCoin.textContent = outcomeSym;
+
+      const isWinner = res.winner_id === Number(userId);
+      userBalance = res.balance;
+      elUserBalance.textContent = userBalance;
+
+      if (isWinner) {
+        playSound("jackpot");
+        if (elMsg) elMsg.textContent = `🏆 ВЫ ПОБЕДИЛИ! Куш: +${res.prize} ⭐!`;
+        showToast(`🎉 Вы выиграли дуэль! +${res.prize} ⭐!`);
+      } else {
+        playSound("crash");
+        if (elMsg) elMsg.textContent = `💀 Победил ${escapeHtml(res.winner_name)}!`;
+        showToast(`Вы проиграли дуэль. Победил ${res.winner_name}`);
+      }
+
+      refreshPvPDuels();
+    }, 2800);
+  } catch (err) {
+    if (elCoin) elCoin.classList.remove("flipping");
+    isPvPPlaying = false;
+    showToast("Ошибка сети: " + err.message);
+  }
+}
+
+function initPvpUI() {
+  refreshPvPDuels();
+
+  const elRefreshBtn = document.getElementById("pvp-refresh-btn");
+  if (elRefreshBtn) elRefreshBtn.onclick = () => refreshPvPDuels();
+
+  const bHeads = document.getElementById("pvp-side-heads");
+  const bTails = document.getElementById("pvp-side-tails");
+  if (bHeads && bTails) {
+    bHeads.onclick = () => {
+      pvpSelectedSide = "heads";
+      bHeads.classList.add("active");
+      bTails.classList.remove("active");
+    };
+    bTails.onclick = () => {
+      pvpSelectedSide = "tails";
+      bTails.classList.add("active");
+      bHeads.classList.remove("active");
+    };
+  }
+
+  const elCreateBtn = document.getElementById("pvp-create-btn");
+  const elBetInput = document.getElementById("pvp-bet-amount");
+
+  if (elBetInput && elCreateBtn) {
+    elBetInput.oninput = () => {
+      const b = Math.max(1, parseInt(elBetInput.value || "1", 10));
+      elCreateBtn.textContent = `СОЗДАТЬ ДУЭЛЬ ЗА ${b} ⭐`;
+    };
+  }
+
+  if (elCreateBtn) {
+    elCreateBtn.onclick = async () => {
+      const bet = Math.max(1, parseInt(elBetInput ? elBetInput.value || "10" : "10", 10));
+      if (userBalance < bet) {
+        showToast("Недостаточно звёзд на балансе!");
+        return;
+      }
+
+      elCreateBtn.disabled = true;
+      try {
+        const res = await fetch("/api/pvp/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: userId, bet: bet, choice: pvpSelectedSide })
+        }).then(r => r.json());
+
+        elCreateBtn.disabled = false;
+        if (res.ok) {
+          userBalance = res.balance;
+          elUserBalance.textContent = userBalance;
+          showToast(`Дуэль на ${bet} ⭐ создана! Ждём оппонента ⚔️`);
+          refreshPvPDuels();
+        } else {
+          showToast(res.error || "Не удалось создать дуэль");
+        }
+      } catch (e) {
+        elCreateBtn.disabled = false;
+        showToast("Ошибка: " + e.message);
+      }
+    };
+  }
+}
+
 // Запуск при старте страницы
 async function initApp() {
   elUserName.textContent = userName;
@@ -3916,6 +4741,8 @@ async function initApp() {
   }
 
   initUpgradeWheel();
+  initReferrals();
+  initAdminDiceAndCases();
   connectWS();
   requestAnimationFrame(renderLoop);
 }

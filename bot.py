@@ -94,6 +94,17 @@ def admin_keyboard() -> InlineKeyboardMarkup:
 async def cmd_start(message: Message):
     user_id = message.from_user.id
     username = message.from_user.username or message.from_user.first_name or "Игрок"
+
+    # Обработка реферального приглашения (/start ref_12345)
+    parts = (message.text or "").split()
+    if len(parts) > 1 and parts[1].startswith("ref_"):
+        try:
+            referrer_id = int(parts[1].replace("ref_", ""))
+            if referrer_id != user_id:
+                await database.register_referral(referrer_id, user_id)
+        except Exception:
+            pass
+
     user = await database.get_or_create_user(user_id, username)
 
     admin_note = "\n\n👑 <i>Вам доступна админ-панель: /admin</i>" if is_owner(user_id) else ""

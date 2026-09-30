@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 import os
+import random
 from aiohttp import web
 
 import database
@@ -15,6 +16,8 @@ from upgrade_engine import upgrade_engine
 from tower_engine import tower_engine
 from coinflip_engine import coinflip_engine
 from plinko_engine import plinko_engine
+from dice_engine import dice_engine
+from cases_engine import cases_engine
 from chat_engine import chat_engine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -234,6 +237,10 @@ async def api_admin_stats(request: web.Request) -> web.Response:
         "coinflip_forced_next": coinflip_engine.forced_next,
         "plinko_rig_mode": plinko_engine.rig_mode,
         "plinko_forced_slot": plinko_engine.forced_slot,
+        "dice_rig_mode": dice_engine.rig_mode,
+        "dice_forced_next": dice_engine.forced_next,
+        "cases_rig_mode": cases_engine.rig_mode,
+        "cases_forced_item_id": cases_engine.forced_item_id,
         "chat_bots_enabled": chat_engine.enable_bot_chat,
         "active_mines_count": len(mines_engine.active_games),
         "enable_bots": engine.enable_bots,
@@ -552,6 +559,8 @@ async def api_admin_global_rtp(request: web.Request) -> web.Response:
     tower_engine.set_rig_mode(mode)
     coinflip_engine.set_rig_mode(mode)
     plinko_engine.rig_mode = mode
+    dice_engine.rig_mode = mode
+    cases_engine.rig_mode = mode
     return web.json_response({
         "ok": True,
         "mode": mode,
@@ -561,7 +570,9 @@ async def api_admin_global_rtp(request: web.Request) -> web.Response:
         "upgrade_rig_mode": upgrade_engine.rig_mode,
         "tower_rig_mode": tower_engine.rig_mode,
         "coinflip_rig_mode": coinflip_engine.rig_mode,
-        "plinko_rig_mode": plinko_engine.rig_mode
+        "plinko_rig_mode": plinko_engine.rig_mode,
+        "dice_rig_mode": dice_engine.rig_mode,
+        "cases_rig_mode": cases_engine.rig_mode
     })
 
 # --- ИГРА TOWER («БАШНЯ» / СТУПЕНИ) ---
@@ -733,16 +744,43 @@ async def api_admin_toggle_bots(request: web.Request) -> web.Response:
     engine.set_bots(enabled)
     return web.json_response({"ok": True, "enable_bots": engine.enable_bots})
 
-async def api_admin_set_balance(request: web.Request) -> web.Response:
+async def api_admin_users_list(request: web.Request) -> web.Response:
+    user_id = int(request.query.get("id", 0))
+    if not is_admin(request, user_id):
+        return web.json_response({"ok": False, "error": "Доступ запрещён"}, status=403)
+    search = request.query.get("search", "")
+    users = await database.get_all_users(search)
+    return web.json_response({"ok": True, "users": users})
+
+async def api_admin_user_ban(request: web.Request) -> web.Response:
     data = await request.json()
-    admin_id = int(data.get("admin_id", 0))
+    admin_id = int(data.get("admin_id") or data.get("id") or 0)
     if not is_admin(request, admin_id):
         return web.json_response({"ok": False, "error": "Доступ запрещён"}, status=403)
     
     target_id = int(data.get("target_id", 0))
-    amount = int(data.get("amount", 100))
-    new_bal = await database.update_balance(target_id, amount)
-    return web.json_response({"ok": True, "balance": new_bal})
+    ban = bool(data.get("ban", True))
+    if target_id in ADMIN_IDS:
+        return web.json_response({"ok": False, "error": "Нельзя забанить администратора!"})
+    
+    await database.admin_ban_user(target_id, ban)
+    return web.json_response({"ok": True, "target_id": target_id, "is_banned": ban})
+
+async def api_admin_set_balance(request: web.Request) -> web.Response:
+    data = await request.json()
+    admin_id = int(data.get("admin_id") or data.get("id") or 0)
+    if not is_admin(request, admin_id):
+        return web.json_response({"ok": False, "error": "Доступ запрещён"}, status=403)
+    
+    target_id = int(data.get("target_id", 0))
+    if "balance" in data:
+        exact_bal = max(0, int(data["balance"]))
+        await database.admin_set_balance(target_id, exact_bal)
+        return web.json_response({"ok": True, "balance": exact_bal})
+    else:
+        amount = int(data.get("amount", 100))
+        new_bal = await database.update_balance(target_id, amount)
+        return web.json_response({"ok": True, "balance": new_bal})
 
 # --- Coinflip API ---
 async def api_coinflip_play(request: web.Request) -> web.Response:
@@ -935,6 +973,227 @@ async def api_admin_promo_delete(request: web.Request) -> web.Response:
     await database.delete_promocode(code)
     return web.json_response({"ok": True})
 
+# --- РЕФЕРАЛЬНАЯ СИСТЕМА (REFERRALS) ---
+async def api_referrals(request: web.Request) -> web.Response:
+    user_id = int(request.query.get("id", 1001))
+    info = await database.get_referral_info(user_id)
+    return web.json_response({"ok": True, **info})
+
+async def api_referral_register(request: web.Request) -> web.Response:
+    data = await request.json()
+    referred_id = int(data.get("id", 1001))
+    referrer_id = int(data.get("referrer_id", 0))
+    if referrer_id and referrer_id != referred_id:
+        success = await database.register_referral(referrer_id, referred_id)
+        return web.json_response({"ok": success})
+    return web.json_response({"ok": False})
+
+# --- ИГРА КОСТИ (DICE 1-100) ---
+async def api_dice_roll(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 1001))
+    bet = int(data.get("bet", 10))
+    target = float(data.get("target", 50.0))
+    condition = str(data.get("condition", "under"))
+
+    user = await database.get_or_create_user(user_id)
+    if user.get("is_banned"):
+        return web.json_response({"ok": False, "error": "Аккаунт заблокирован"}, status=403)
+    if user["balance"] < bet:
+        return web.json_response({"ok": False, "error": "Недостаточно звёзд на балансе!"})
+
+    bal_after = await database.update_balance(user_id, -bet)
+
+    res = dice_engine.roll(bet, target, condition)
+    if not res.get("ok"):
+        await database.update_balance(user_id, bet)
+        return web.json_response(res)
+
+    payout = res["payout"]
+    final_bal = bal_after
+    if payout > 0:
+        final_bal = await database.update_balance(user_id, payout)
+        if payout >= 25:
+            chat_engine.broadcast_win(user["username"], "Кости 🎲", payout, res["multiplier"])
+
+    await database.record_dice_game(
+        user_id=user_id,
+        bet=bet,
+        target=target,
+        condition=condition,
+        roll=res["roll"],
+        multiplier=res["multiplier"],
+        payout=payout,
+        status="win" if res["win"] else "loss"
+    )
+    res["balance"] = final_bal
+    return web.json_response(res)
+
+async def api_admin_dice_rig(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 0))
+    if not is_admin(request, user_id):
+        return web.json_response({"ok": False, "error": "Доступ запрещён"}, status=403)
+    dice_engine.rig_mode = data.get("mode", "normal")
+    return web.json_response({"ok": True, "dice_rig_mode": dice_engine.rig_mode})
+
+async def api_admin_dice_force(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 0))
+    if not is_admin(request, user_id):
+        return web.json_response({"ok": False, "error": "Доступ запрещён"}, status=403)
+    dice_engine.forced_next = data.get("outcome")
+    return web.json_response({"ok": True, "dice_forced_next": dice_engine.forced_next})
+
+# --- ИГРА КЕЙСЫ (CASES / ЛУТБОКСЫ) ---
+async def api_cases_catalog(request: web.Request) -> web.Response:
+    return web.json_response({"ok": True, "cases": cases_engine.get_cases_catalog()})
+
+async def api_cases_open(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 1001))
+    case_id = str(data.get("case_id", "novice"))
+
+    cases_cat = cases_engine.get_cases_catalog()
+    case_cfg = cases_cat.get(case_id)
+    if not case_cfg:
+        return web.json_response({"ok": False, "error": "Кейс не существует"})
+
+    cost = case_cfg["cost"]
+    user = await database.get_or_create_user(user_id)
+    if user.get("is_banned"):
+        return web.json_response({"ok": False, "error": "Аккаунт заблокирован"}, status=403)
+    if user["balance"] < cost:
+        return web.json_response({"ok": False, "error": f"Недостаточно звёзд! Нужно {cost} ⭐"})
+
+    bal_after = await database.update_balance(user_id, -cost)
+    res = cases_engine.open_case(case_id)
+    if not res.get("ok"):
+        await database.update_balance(user_id, cost)
+        return web.json_response(res)
+
+    won_item = res["won_item"]
+    reward_amt = won_item["amount"]
+    final_bal = bal_after
+    if reward_amt > 0:
+        final_bal = await database.update_balance(user_id, reward_amt)
+        mult = round(reward_amt / cost, 2)
+        if reward_amt >= cost * 1.5:
+            chat_engine.broadcast_win(user["username"], f"Кейс {case_cfg['name']} 📦", reward_amt, mult)
+
+    await database.record_case_opening(
+        user_id=user_id,
+        case_id=case_id,
+        cost=cost,
+        reward_type="stars",
+        reward_title=won_item["name"],
+        reward_amount=reward_amt
+    )
+
+    res["balance"] = final_bal
+    return web.json_response(res)
+
+async def api_admin_cases_rig(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 0))
+    if not is_admin(request, user_id):
+        return web.json_response({"ok": False, "error": "Доступ запрещён"}, status=403)
+    cases_engine.rig_mode = data.get("mode", "normal")
+    return web.json_response({"ok": True, "cases_rig_mode": cases_engine.rig_mode})
+
+async def api_admin_cases_force(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 0))
+    if not is_admin(request, user_id):
+        return web.json_response({"ok": False, "error": "Доступ запрещён"}, status=403)
+    cases_engine.forced_item_id = data.get("item_id")
+    return web.json_response({"ok": True, "cases_forced_item_id": cases_engine.forced_item_id})
+
+# --- PvP ДУЭЛИ (PvP COINFLIP 1v1) ---
+async def api_pvp_list(request: web.Request) -> web.Response:
+    duels = await database.list_open_pvp_duels()
+    return web.json_response({"ok": True, "duels": duels})
+
+async def api_pvp_create(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 1001))
+    bet = int(data.get("bet", 10))
+    choice = str(data.get("choice", "heads")).lower()
+    if choice not in ("heads", "tails"):
+        choice = "heads"
+    if bet < 1:
+        return web.json_response({"ok": False, "error": "Минимум 1 ⭐"})
+
+    user = await database.get_or_create_user(user_id)
+    if user.get("is_banned"):
+        return web.json_response({"ok": False, "error": "Аккаунт заблокирован"}, status=403)
+    if user["balance"] < bet:
+        return web.json_response({"ok": False, "error": "Недостаточно звёзд на балансе!"})
+
+    bal = await database.update_balance(user_id, -bet)
+    duel_id = await database.create_pvp_duel(user_id, user["username"], bet, choice)
+    return web.json_response({"ok": True, "duel_id": duel_id, "balance": bal})
+
+async def api_pvp_cancel(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 1001))
+    duel_id = int(data.get("duel_id", 0))
+    
+    duel = await database.get_pvp_duel(duel_id)
+    if not duel or duel["creator_id"] != user_id or duel["status"] != "open":
+        return web.json_response({"ok": False, "error": "Дуэль нельзя отменить"})
+
+    success = await database.cancel_pvp_duel(duel_id, user_id)
+    if success:
+        new_bal = await database.update_balance(user_id, duel["bet"])
+        return web.json_response({"ok": True, "balance": new_bal})
+    return web.json_response({"ok": False, "error": "Не удалось отменить"})
+
+async def api_pvp_join(request: web.Request) -> web.Response:
+    data = await request.json()
+    user_id = int(data.get("id", 1001))
+    duel_id = int(data.get("duel_id", 0))
+
+    duel = await database.get_pvp_duel(duel_id)
+    if not duel or duel["status"] != "open":
+        return web.json_response({"ok": False, "error": "Дуэль уже завершена или отменена"})
+    if duel["creator_id"] == user_id:
+        return web.json_response({"ok": False, "error": "Нельзя играть с самим собой!"})
+
+    bet = duel["bet"]
+    user = await database.get_or_create_user(user_id)
+    if user.get("is_banned"):
+        return web.json_response({"ok": False, "error": "Аккаунт заблокирован"}, status=403)
+    if user["balance"] < bet:
+        return web.json_response({"ok": False, "error": "Недостаточно звёзд для дуэли!"})
+
+    bal_after = await database.update_balance(user_id, -bet)
+
+    outcome = "heads" if random.random() < 0.5 else "tails"
+    creator_wins = (outcome == duel["choice"])
+    winner_id = duel["creator_id"] if creator_wins else user_id
+    winner_name = duel["creator_name"] if creator_wins else user["username"]
+
+    total_pot = bet * 2
+    commission = int(total_pot * 0.05)
+    prize = total_pot - commission
+
+    await database.join_pvp_duel(duel_id, user_id, user["username"], winner_id, outcome)
+    new_bal_winner = await database.update_balance(winner_id, prize)
+
+    chat_engine.broadcast_win(winner_name, "PvP Дуэль ⚔️", prize, round(prize / bet, 2))
+
+    return web.json_response({
+        "ok": True,
+        "duel_id": duel_id,
+        "outcome": outcome,
+        "winner_id": winner_id,
+        "winner_name": winner_name,
+        "prize": prize,
+        "commission": commission,
+        "balance": new_bal_winner if winner_id == user_id else bal_after
+    })
+
 def create_app() -> web.Application:
     app = web.Application()
     app.router.add_get("/", index_handler)
@@ -968,6 +1227,23 @@ def create_app() -> web.Application:
     app.router.add_post("/api/plinko/drop", api_plinko_drop)
     app.router.add_post("/api/admin/plinko/rig", api_admin_plinko_rig)
     app.router.add_post("/api/admin/plinko/force", api_admin_plinko_force)
+    # Кости (Dice 1-100)
+    app.router.add_post("/api/dice/roll", api_dice_roll)
+    app.router.add_post("/api/admin/dice/rig", api_admin_dice_rig)
+    app.router.add_post("/api/admin/dice/force", api_admin_dice_force)
+    # Кейсы (Cases)
+    app.router.add_get("/api/cases/list", api_cases_catalog)
+    app.router.add_post("/api/cases/open", api_cases_open)
+    app.router.add_post("/api/admin/cases/rig", api_admin_cases_rig)
+    app.router.add_post("/api/admin/cases/force", api_admin_cases_force)
+    # PvP Дуэли
+    app.router.add_get("/api/pvp/list", api_pvp_list)
+    app.router.add_post("/api/pvp/create", api_pvp_create)
+    app.router.add_post("/api/pvp/cancel", api_pvp_cancel)
+    app.router.add_post("/api/pvp/join", api_pvp_join)
+    # Рефералы
+    app.router.add_get("/api/referrals", api_referrals)
+    app.router.add_post("/api/referrals/register", api_referral_register)
     # Промокоды
     app.router.add_post("/api/promo/activate", api_promo_activate)
     app.router.add_post("/api/admin/promo/create", api_admin_promo_create)
@@ -981,6 +1257,8 @@ def create_app() -> web.Application:
     app.router.add_post("/api/admin/chat/toggle", api_admin_chat_toggle)
     # Админка
     app.router.add_get("/api/admin/stats", api_admin_stats)
+    app.router.add_get("/api/admin/users/list", api_admin_users_list)
+    app.router.add_post("/api/admin/users/ban", api_admin_user_ban)
     app.router.add_post("/api/admin/instant_crash", api_admin_instant_crash)
     app.router.add_post("/api/admin/force_crash", api_admin_force_crash)
     app.router.add_post("/api/admin/rig_mode", api_admin_rig_mode)

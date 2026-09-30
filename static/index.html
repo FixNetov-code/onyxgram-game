@@ -26,6 +26,7 @@
           </div>
         </div>
         <div class="header-actions">
+          <button class="icon-btn header-nav-btn ref-btn" id="open-referrals-btn" title="Рефералы (+5 ⭐)">👥</button>
           <button class="icon-btn header-nav-btn" id="open-leaderboard-btn" title="Топ заносов">🏆</button>
           <button class="icon-btn header-nav-btn chat-trigger-btn" id="open-chat-btn" title="Онлайн чат">💬<span class="chat-dot"></span></button>
           <button class="icon-btn header-nav-btn" id="open-promo-btn" title="Промокод">🎟️</button>
@@ -199,6 +200,69 @@
               <span class="tag-pill">3 режима риска</span>
             </div>
             <button class="play-card-btn btn-plinko">ИГРАТЬ В ПЛИНКО 🔴</button>
+          </div>
+        </div>
+
+        <!-- Карточка 8: КОСТИ (DICE 1-100) -->
+        <div class="game-card dice-card" id="card-play-dice">
+          <div class="card-badge purple-badge">🎲 ВЫБОР ШАНСА</div>
+          <div class="card-visual">
+            <div class="dice-teaser-visual">
+              <span class="dice-spin-icon">🎲</span>
+              <span class="dice-spin-x">97.0x</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <h2 class="card-title">Кости («Dice 1-100»)</h2>
+            <p class="card-desc">Настраивай шанс победы от 1% до 95%! Выбирай больше или меньше и умножай баланс.</p>
+            <div class="card-tags">
+              <span class="tag-pill purple-tag">Шанс 1-95%</span>
+              <span class="tag-pill">Множитель до 97x</span>
+              <span class="tag-pill">Provably Fair</span>
+            </div>
+            <button class="play-card-btn btn-dice">БРОСИТЬ КОСТИ 🎲</button>
+          </div>
+        </div>
+
+        <!-- Карточка 9: КЕЙСЫ (CASES / ЛУТБОКСЫ) -->
+        <div class="game-card cases-card" id="card-play-cases">
+          <div class="card-badge gold-badge">📦 ДЖЕКПОТ 2000 ⭐</div>
+          <div class="card-visual">
+            <div class="cases-teaser-visual">
+              <span class="cs-case-icon">📦</span>
+              <span class="cs-case-x">CS:GO</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <h2 class="card-title">Кейсы («Lootboxes»)</h2>
+            <p class="card-desc">Открывай кейсы в стиле CS:GO с горизонтальной лентой и выигрывай горы Telegram Stars!</p>
+            <div class="card-tags">
+              <span class="tag-pill gold-tag">До 2 000 ⭐</span>
+              <span class="tag-pill">3 кейса</span>
+              <span class="tag-pill">Плавная рулетка</span>
+            </div>
+            <button class="play-card-btn btn-cases">ОТКРЫТЬ КЕЙСЫ 📦</button>
+          </div>
+        </div>
+
+        <!-- Карточка 10: PvP ДУЭЛИ (1v1 COINFLIP) -->
+        <div class="game-card pvp-card" id="card-play-pvp">
+          <div class="card-badge red-badge">⚔️ 1 НА 1 ЖИВОЙ PvP</div>
+          <div class="card-visual">
+            <div class="pvp-teaser-visual">
+              <span class="pvp-icon">⚔️</span>
+              <span class="pvp-pot-x">x2 КУШ</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <h2 class="card-title">PvP Дуэли («1v1»)</h2>
+            <p class="card-desc">Сразись с другими реальными игроками за общий банк! Создавай лобби или принимай вызов.</p>
+            <div class="card-tags">
+              <span class="tag-pill red-tag">Игрок vs Игрок</span>
+              <span class="tag-pill">Без ботов</span>
+              <span class="tag-pill">Комиссия всего 5%</span>
+            </div>
+            <button class="play-card-btn btn-pvp">ВОЙТИ В АРЕНУ ⚔️</button>
           </div>
         </div>
       </div>
@@ -838,6 +902,217 @@
         </button>
       </div>
     </div>
+
+    <!-- ==================== ЭКРАН 8: КОСТИ (DICE 1-100) ==================== -->
+    <div class="view-screen" id="view-dice" style="display: none;">
+      <div class="game-header-bar dice-header-bar">
+        <div class="game-title-group">
+          <span class="game-emoji">🎲</span>
+          <div>
+            <h2 class="screen-title">Кости («Dice 1-100»)</h2>
+            <span class="screen-subtitle">Выбирай шанс победы от 1% до 95%</span>
+          </div>
+        </div>
+        <div class="dice-provably-badge">🔒 Provably Fair</div>
+      </div>
+
+      <div class="dice-arena-card">
+        <!-- Табло с выпавшим числом -->
+        <div class="dice-display-box" id="dice-display-box">
+          <div class="dice-number" id="dice-result-number">50.00</div>
+          <div class="dice-sub-status" id="dice-result-status">Сделайте бросок</div>
+        </div>
+
+        <!-- Ползунок и шкала 0 - 100 -->
+        <div class="dice-slider-wrap">
+          <div class="dice-slider-track-wrap">
+            <input type="range" id="dice-slider" min="1" max="95" value="50" step="1" class="dice-slider">
+            <div class="dice-slider-labels">
+              <span>0</span>
+              <span>25</span>
+              <span>50</span>
+              <span>75</span>
+              <span>100</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Инфо-панель (Цель, Шанс, Множитель) -->
+        <div class="dice-stats-grid">
+          <div class="dice-stat-box">
+            <span class="d-label">Множитель</span>
+            <span class="d-val gold-val" id="dice-mult-label">1.94x</span>
+          </div>
+          <div class="dice-stat-box">
+            <span class="d-label">Шанс победы</span>
+            <span class="d-val" id="dice-chance-label">50.00%</span>
+          </div>
+          <div class="dice-stat-box">
+            <span class="d-label">Выигрыш</span>
+            <span class="d-val emerald-val" id="dice-payout-label">19.4 ⭐</span>
+          </div>
+        </div>
+
+        <!-- Условие: Меньше / Больше -->
+        <div class="dice-condition-toggle">
+          <button class="d-cond-btn active" id="dice-cond-under" data-cond="under">Меньше (&lt; <span id="dice-target-under-val">50.00</span>)</button>
+          <button class="d-cond-btn" id="dice-cond-over" data-cond="over">Больше (&gt; <span id="dice-target-over-val">50.00</span>)</button>
+        </div>
+      </div>
+
+      <!-- Панель управления ставкой -->
+      <div class="bet-controls-card">
+        <div class="dice-bet-row">
+          <label class="input-label">Ставка (⭐)</label>
+          <div class="input-with-actions">
+            <input type="number" id="dice-bet-amount" value="10" min="1" max="1000000" step="1">
+            <div class="quick-adjust">
+              <button class="adj-btn" id="dice-btn-div2">½</button>
+              <button class="adj-btn" id="dice-btn-mul2">2×</button>
+              <button class="adj-btn" id="dice-btn-max">MAX</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-chips">
+          <button class="chip-btn dice-chip" data-amt="5">5</button>
+          <button class="chip-btn dice-chip" data-amt="10">10</button>
+          <button class="chip-btn dice-chip" data-amt="25">25</button>
+          <button class="chip-btn dice-chip" data-amt="50">50</button>
+          <button class="chip-btn dice-chip" data-amt="100">100</button>
+        </div>
+
+        <button class="dice-roll-btn" id="dice-roll-btn" type="button">
+          <span class="dice-btn-primary">🎲 БРОСИТЬ КОСТИ</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== ЭКРАН 9: КЕЙСЫ (CASES / ЛУТБОКСЫ) ==================== -->
+    <div class="view-screen" id="view-cases" style="display: none;">
+      <div class="game-header-bar cases-header-bar">
+        <div class="game-title-group">
+          <span class="game-emoji">📦</span>
+          <div>
+            <h2 class="screen-title">Кейсы («CS:GO Lootboxes»)</h2>
+            <span class="screen-subtitle">Крути рулетку • Призы до 2 000 ⭐</span>
+          </div>
+        </div>
+        <div class="cases-status-badge" id="cases-status-badge">Выбери кейс</div>
+      </div>
+
+      <!-- Переключатель кейсов (3 штуки) -->
+      <div class="cases-selector-row">
+        <button class="case-select-tab active" data-case="novice" id="case-tab-novice">
+          <span class="c-tab-icon">📦</span>
+          <span class="c-tab-name">Новичок</span>
+          <span class="c-tab-price">10 ⭐</span>
+        </button>
+        <button class="case-select-tab" data-case="cosmos" id="case-tab-cosmos">
+          <span class="c-tab-icon">🚀</span>
+          <span class="c-tab-name">Космос</span>
+          <span class="c-tab-price">50 ⭐</span>
+        </button>
+        <button class="case-select-tab" data-case="oligarch" id="case-tab-oligarch">
+          <span class="c-tab-icon">👑</span>
+          <span class="c-tab-name">Олигарх</span>
+          <span class="c-tab-price">200 ⭐</span>
+        </button>
+      </div>
+
+      <!-- Горизонтальная рулетка с центральным маркером -->
+      <div class="cases-roulette-container">
+        <div class="roulette-marker"></div>
+        <div class="roulette-track" id="roulette-track">
+          <!-- Заполняется элементами кейса динамически -->
+        </div>
+      </div>
+
+      <!-- Кнопка открытия кейса -->
+      <div class="cases-action-wrap">
+        <button class="case-open-btn" id="case-open-btn" type="button">
+          <span class="case-open-text" id="case-open-text">ОТКРЫТЬ ЗА 10 ⭐</span>
+        </button>
+      </div>
+
+      <!-- Содержимое выбранного кейса -->
+      <div class="case-items-preview-card">
+        <div class="preview-title">🎁 Содержимое кейса:</div>
+        <div class="case-items-grid" id="case-items-grid">
+          <!-- Элементы кейса -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== ЭКРАН 10: PvP ДУЭЛИ (1v1 COINFLIP) ==================== -->
+    <div class="view-screen" id="view-pvp" style="display: none;">
+      <div class="game-header-bar pvp-header-bar">
+        <div class="game-title-group">
+          <span class="game-emoji">⚔️</span>
+          <div>
+            <h2 class="screen-title">PvP Дуэли («1 на 1»)</h2>
+            <span class="screen-subtitle">Сражайся с игроками • Комиссия всего 5%</span>
+          </div>
+        </div>
+        <button class="pvp-refresh-btn" id="pvp-refresh-btn">🔄 Обновить</button>
+      </div>
+
+      <!-- Карточка создания своей дуэли -->
+      <div class="pvp-create-card">
+        <h3 class="pvp-card-title">⚔️ Создать новую дуэль</h3>
+        <div class="pvp-create-row">
+          <div class="pvp-bet-input-wrap">
+            <label class="input-label">Ставка (⭐)</label>
+            <input type="number" id="pvp-bet-amount" value="10" min="1" max="100000" step="1">
+          </div>
+          <div class="pvp-side-select">
+            <label class="input-label">Твоя сторона:</label>
+            <div class="pvp-side-btns">
+              <button class="pvp-side-btn active" data-side="heads" id="pvp-side-heads">🦅 Орёл</button>
+              <button class="pvp-side-btn" data-side="tails" id="pvp-side-tails">🪙 Решка</button>
+            </div>
+          </div>
+        </div>
+        <button class="pvp-create-btn" id="pvp-create-btn">СОЗДАТЬ ДУЭЛЬ ЗА 10 ⭐</button>
+      </div>
+
+      <!-- Арена активного раунда дуэли (скрыта до старта) -->
+      <div class="pvp-arena-card" id="pvp-arena-card" style="display: none;">
+        <div class="pvp-matchup-header">
+          <div class="pvp-fighter" id="pvp-fighter-1">
+            <span class="f-avatar">👤</span>
+            <span class="f-name" id="pvp-f1-name">Игрок 1</span>
+            <span class="f-choice" id="pvp-f1-choice">🦅 Орёл</span>
+          </div>
+          <div class="pvp-vs-badge">VS</div>
+          <div class="pvp-fighter" id="pvp-fighter-2">
+            <span class="f-avatar">👤</span>
+            <span class="f-name" id="pvp-f2-name">Игрок 2</span>
+            <span class="f-choice" id="pvp-f2-choice">🪙 Решка</span>
+          </div>
+        </div>
+
+        <div class="pvp-coin-wrap">
+          <div class="pvp-coin-disc" id="pvp-coin-disc">
+            <div class="coin-face coin-front">🦅</div>
+            <div class="coin-face coin-back">🪙</div>
+          </div>
+        </div>
+
+        <div class="pvp-result-msg" id="pvp-result-msg">Бросок монеты...</div>
+      </div>
+
+      <!-- Список открытых дуэлей -->
+      <div class="pvp-lobby-list-card">
+        <div class="pvp-list-header">
+          <h3>🔥 Открытые дуэли других игроков</h3>
+          <span class="pvp-open-count" id="pvp-open-count">0 лобби</span>
+        </div>
+        <div class="pvp-duels-list" id="pvp-duels-list">
+          <div class="pvp-empty-msg">Пока нет открытых дуэлей. Создайте первую!</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ==================== МОДАЛЬНЫЕ ОКНА ==================== -->
@@ -983,6 +1258,46 @@
     </div>
   </div>
 
+  <!-- Модальное окно Реферальной программы -->
+  <div class="modal-overlay" id="referrals-modal">
+    <div class="modal-box referrals-modal-box">
+      <div class="modal-header-with-badge">
+        <h3>👥 Пригласи друзей (+5 ⭐)</h3>
+        <span class="admin-badge green-badge">Бонус</span>
+      </div>
+      <p class="modal-desc">Приглашайте друзей в Onyx Casino и получайте <b>+5 ⭐ Звёзд</b> за каждого приглашённого игрока!</p>
+
+      <div class="ref-stats-cards">
+        <div class="ref-stat-card">
+          <span class="ref-stat-num" id="ref-count-val">0</span>
+          <span class="ref-stat-lbl">Друзей</span>
+        </div>
+        <div class="ref-stat-card">
+          <span class="ref-stat-num gold-val" id="ref-earned-val">0 ⭐</span>
+          <span class="ref-stat-lbl">Заработано</span>
+        </div>
+      </div>
+
+      <div class="ref-link-card">
+        <label class="ref-link-lbl">Твоя личная ссылка-приглашение:</label>
+        <div class="ref-link-input-row">
+          <input type="text" id="ref-link-input" readonly value="https://t.me/onyxgram_bot?start=ref_0">
+          <button class="ref-copy-btn" id="ref-copy-btn" title="Копировать">📋 Скопировать</button>
+        </div>
+        <button class="ref-share-btn" id="ref-share-btn">📲 Поделиться в Telegram</button>
+      </div>
+
+      <div class="ref-friends-list-card">
+        <div class="ref-friends-title">Приглашённые игроки:</div>
+        <div class="ref-friends-list" id="ref-friends-list">
+          <div class="ref-empty-state">У вас пока нет приглашённых друзей</div>
+        </div>
+      </div>
+
+      <button class="close-modal-btn" id="close-referrals-btn">Закрыть</button>
+    </div>
+  </div>
+
   <!-- Модальное окно Админ-панели -->
   <div class="modal-overlay" id="admin-modal">
     <div class="modal-box admin-modal-box">
@@ -1025,11 +1340,20 @@
           <span class="stat-label">Плинко ставки</span>
           <span class="stat-val" id="adm-plinko-bets-cnt">0 ⭐</span>
         </div>
+        <div class="admin-stat-card">
+          <span class="stat-label">Кости ставки</span>
+          <span class="stat-val" id="adm-dice-bets-cnt">0 ⭐</span>
+        </div>
+        <div class="admin-stat-card">
+          <span class="stat-label">Кейсы ставки</span>
+          <span class="stat-val" id="adm-cases-bets-cnt">0 ⭐</span>
+        </div>
       </div>
 
       <!-- Навигация по вкладкам Админ-панели -->
       <div class="admin-tabs-bar">
         <button class="adm-tab-pill active" data-tab="adm-tab-global">⚡ Главная</button>
+        <button class="adm-tab-pill" data-tab="adm-tab-users">👥 Игроки</button>
         <button class="adm-tab-pill" data-tab="adm-tab-crash">🚀 Ракета</button>
         <button class="adm-tab-pill" data-tab="adm-tab-slots">🎰 Слоты</button>
         <button class="adm-tab-pill" data-tab="adm-tab-mines">💣 Минёр</button>
@@ -1037,6 +1361,8 @@
         <button class="adm-tab-pill" data-tab="adm-tab-tower">🏰 Башня</button>
         <button class="adm-tab-pill" data-tab="adm-tab-coinflip">🪙 Монетка</button>
         <button class="adm-tab-pill" data-tab="adm-tab-plinko">🔴 Плинко</button>
+        <button class="adm-tab-pill" data-tab="adm-tab-dice">🎲 Кости</button>
+        <button class="adm-tab-pill" data-tab="adm-tab-cases">📦 Кейсы</button>
         <button class="adm-tab-pill" data-tab="adm-tab-promo">🎟️ Промо</button>
         <button class="adm-tab-pill" data-tab="adm-tab-chat">💬 Чат</button>
       </div>
@@ -1296,6 +1622,76 @@
             <div class="admin-flex-row" style="margin-top: 6px;">
               <span>🤖 Сообщения ботов в чате:</span>
               <button class="toggle-btn" id="adm-toggle-chat-bots-btn">ВКЛ</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ВКЛАДКА 11: УПРАВЛЕНИЕ ИГРОКАМИ (БАНЫ / БАЛАНСЫ) -->
+        <div class="adm-tab-pane" id="adm-tab-users">
+          <div class="admin-section">
+            <div class="admin-flex-row">
+              <label class="admin-sec-title">👥 Игроки и управление банами</label>
+              <button class="adm-pill" id="adm-users-refresh-btn">🔄 Обновить</button>
+            </div>
+            <div class="admin-row" style="margin-top: 8px;">
+              <input type="text" id="adm-users-search-input" placeholder="Поиск по Telegram ID или нику...">
+              <button class="adm-action-btn" id="adm-users-search-btn">🔍 Найти</button>
+            </div>
+            <div class="adm-users-list-wrap">
+              <div class="adm-users-list" id="adm-users-list">
+                <div class="adm-empty-list">Нажмите «Обновить» для загрузки списка</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ВКЛАДКА 12: КОСТИ (DICE 1-100) -->
+        <div class="adm-tab-pane" id="adm-tab-dice">
+          <div class="admin-section">
+            <div class="admin-flex-row">
+              <label class="admin-sec-title">🎲 Настройка Костей (Dice 1-100)</label>
+              <span class="admin-rtp-tag" id="adm-dice-rtp-tag">96%</span>
+            </div>
+            <span class="admin-sec-sub">Принудительный исход следующего броска:</span>
+            <div class="admin-quick-pills">
+              <button class="adm-pill adm-dice-force-btn btn-jackpot-pill" data-outcome="win">🏆 Всегда Победа</button>
+              <button class="adm-pill adm-dice-force-btn btn-danger-pill" data-outcome="loss">💀 Всегда Слив</button>
+              <button class="adm-pill adm-dice-force-btn" data-outcome="reset">🎲 Сброс</button>
+            </div>
+            <span class="admin-sec-sub" style="margin-top: 8px;">RTP Костей:</span>
+            <div class="admin-segmented rtp-segmented-grid">
+              <button class="seg-btn-dice active" data-mode="normal">96% Честный</button>
+              <button class="seg-btn-dice" data-mode="greedy">75% Жадный</button>
+              <button class="seg-btn-dice btn-amber-rtp" data-mode="hard_50">50% Жесткий</button>
+              <button class="seg-btn-dice btn-orange-rtp" data-mode="trap_20">20% Капкан</button>
+              <button class="seg-btn-dice btn-super-greedy" data-mode="super_greedy_5">💀 5% Супер</button>
+              <button class="seg-btn-dice btn-boost-rtp" data-mode="boost">130% Буст</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ВКЛАДКА 13: КЕЙСЫ (CASES / ЛУТБОКСЫ) -->
+        <div class="adm-tab-pane" id="adm-tab-cases">
+          <div class="admin-section">
+            <div class="admin-flex-row">
+              <label class="admin-sec-title">📦 Настройка Кейсов</label>
+              <span class="admin-rtp-tag" id="adm-cases-rtp-tag">96%</span>
+            </div>
+            <span class="admin-sec-sub">Принудительный топовый дроп:</span>
+            <div class="admin-quick-pills">
+              <button class="adm-pill adm-cases-force-btn btn-jackpot-pill" data-item="o6">👑 2000 ⭐ Империя</button>
+              <button class="adm-pill adm-cases-force-btn btn-jackpot-pill" data-item="c6">🌌 400 ⭐ Квазар</button>
+              <button class="adm-pill adm-cases-force-btn btn-jackpot-pill" data-item="n6">👑 75 ⭐ Джекпот</button>
+              <button class="adm-pill adm-cases-force-btn" data-item="reset">🎲 Сброс</button>
+            </div>
+            <span class="admin-sec-sub" style="margin-top: 8px;">RTP Кейсов:</span>
+            <div class="admin-segmented rtp-segmented-grid">
+              <button class="seg-btn-cases active" data-mode="normal">96% Честный</button>
+              <button class="seg-btn-cases" data-mode="greedy">75% Жадный</button>
+              <button class="seg-btn-cases btn-amber-rtp" data-mode="hard_50">50% Жесткий</button>
+              <button class="seg-btn-cases btn-orange-rtp" data-mode="trap_20">20% Капкан</button>
+              <button class="seg-btn-cases btn-super-greedy" data-mode="super_greedy_5">💀 5% Супер</button>
+              <button class="seg-btn-cases btn-boost-rtp" data-mode="boost">130% Буст</button>
             </div>
           </div>
         </div>
