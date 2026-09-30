@@ -28,10 +28,22 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 engine = CrashGameEngine()
 
+@web.middleware
+async def no_cache_middleware(request: web.Request, handler):
+    resp = await handler(request)
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
+
 async def index_handler(request: web.Request) -> web.Response:
     index_path = os.path.join(STATIC_DIR, "index.html")
     if os.path.exists(index_path):
-        return web.FileResponse(index_path)
+        return web.FileResponse(index_path, headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        })
     return web.Response(text="index.html not found", status=404)
 
 async def ws_handler(request: web.Request) -> web.WebSocketResponse:
@@ -1195,7 +1207,7 @@ async def api_pvp_join(request: web.Request) -> web.Response:
     })
 
 def create_app() -> web.Application:
-    app = web.Application()
+    app = web.Application(middlewares=[no_cache_middleware])
     app.router.add_get("/", index_handler)
     app.router.add_get("/ws", ws_handler)
     app.router.add_get("/api/user", api_user)
